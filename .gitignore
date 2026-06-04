@@ -1,0 +1,57 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+*.manifest
+*.spec
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# --- Tooling caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.cache/
+
+# --- Editors / OS ---
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# --- UNAV-SA local runtime data ---
+# Local cache, working databases and any downloaded catalog subsets are
+# user/runtime state and must never be committed. By design UNAV-SA keeps only
+# a bounded local working set — never a full survey mirror.
+.unav/
+var/
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.log
+
+# Downloaded catalog query results / cache artifacts.
+# (Curated example data under samples/ is committed explicitly.)
+*.vot
+cache/
+data_cache/
+downloads/

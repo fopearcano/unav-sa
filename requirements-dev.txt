@@ -1,0 +1,15 @@
+# UNAV-SA development dependencies.
+# Includes the runtime/core stack plus tooling for tests, lint and build.
+
+-r requirements.txt
+
+pytest>=8.0
+ruff>=0.4
+mypy>=1.8
+build>=1.0
+
+# Optional / future stacks — uncomment to develop against them locally:
+# astroquery>=0.4.7
+# pyvo>=1.5
+# fastapi>=0.110
+# uvicorn>=0.29
