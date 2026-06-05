@@ -13,6 +13,7 @@ This package does not fetch data (see :mod:`unav_core.connectors`) or persist it
 from unav_core.data.dataset import Dataset
 from unav_core.data.io import read_jsonl, validate_jsonl, write_jsonl
 from unav_core.data.object_types import ObjectType
+from unav_core.data.sample_generator import generate_sample_catalog, write_sample_catalog
 from unav_core.data.schema import CANONICAL_UNITS, CatalogObject
 
 __all__ = [
@@ -23,4 +24,6 @@ __all__ = [
     "read_jsonl",
     "write_jsonl",
     "validate_jsonl",
+    "generate_sample_catalog",
+    "write_sample_catalog",
 ]
