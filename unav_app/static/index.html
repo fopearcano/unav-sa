@@ -66,8 +66,15 @@
         </div>
 
         <div class="panel">
-          <h2>2D sky (RA/Dec) <span class="muted" id="plot-note"></span></h2>
-          <canvas id="sky" width="560" height="300"></canvas>
+          <h2>2D sky navigator (RA/Dec) <span class="muted" id="plot-note"></span></h2>
+          <div class="row toolbar">
+            <button id="full-sky-btn" class="chip">Full sky</button>
+            <button id="load-region-btn" class="chip">Load region in view</button>
+            <button id="fit-btn" class="chip">Fit</button>
+            <span class="muted hint">drag to pan · wheel to zoom · click a point to select</span>
+          </div>
+          <canvas id="sky"></canvas>
+          <div id="legend" class="legend"></div>
         </div>
 
         <div class="panel">
@@ -84,6 +91,7 @@
 
     <footer class="statusbar"><span id="status">ready</span></footer>
 
+    <script src="sky.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

@@ -100,11 +100,22 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 canvas#sky {
   width: 100%;
-  height: 300px;
+  height: 340px;
   background: #070a12;
   border: 1px solid var(--line);
   border-radius: 8px;
+  touch-action: none;
+  cursor: grab;
+  display: block;
 }
+
+.toolbar { align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.chip { padding: 5px 10px; font-size: 12px; }
+.hint { margin-left: auto; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; font-size: 11px; color: var(--muted); }
+.legend-item { display: inline-flex; align-items: center; gap: 5px; }
+.swatch { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
 .viewport3d {
   height: 220px;

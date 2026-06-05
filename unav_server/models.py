@@ -7,7 +7,7 @@ directly as request/response bodies elsewhere in the API.
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 from unav_core.data.schema import CatalogObject
 from unav_core.navigation.state import NavigatorState
@@ -55,3 +55,22 @@ class VisibleSectorRequest(BaseModel):
     sort: str = "distance"
     object_types: list[str] | None = None
     max_magnitude: float | None = None
+
+
+class SkyRegionRequest(BaseModel):
+    """Body for ``POST /sky/query-region`` — an RA/Dec box (degrees).
+
+    ``ra_min > ra_max`` selects a box that wraps across the 0/360 seam.
+    """
+
+    ra_min: float = Field(ge=0.0, le=360.0)
+    ra_max: float = Field(ge=0.0, le=360.0)
+    dec_min: float = Field(ge=-90.0, le=90.0)
+    dec_max: float = Field(ge=-90.0, le=90.0)
+    limit: int | None = Field(default=2000, ge=1, le=20000)
+
+    @model_validator(mode="after")
+    def _dec_order(self) -> SkyRegionRequest:
+        if self.dec_max < self.dec_min:
+            raise ValueError("dec_max must be >= dec_min")
+        return self

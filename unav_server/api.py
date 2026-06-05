@@ -18,6 +18,7 @@ from unav_server.models import (
     HealthResponse,
     ImportJsonlRequest,
     ObjectListResponse,
+    SkyRegionRequest,
     VisibleSectorRequest,
 )
 from unav_server.state_service import StateService
@@ -118,6 +119,26 @@ def visible_sector_query(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ObjectListResponse(count=len(results), objects=results)
+
+
+@router.get("/visible-sector/current", response_model=ObjectListResponse)
+def visible_sector_current(service: StateService = Depends(get_service)) -> ObjectListResponse:
+    results = service.visible_sector_current()
+    return ObjectListResponse(count=len(results), objects=results)
+
+
+@router.post("/sky/query-region", response_model=ObjectListResponse)
+def sky_query_region(
+    request: SkyRegionRequest, service: StateService = Depends(get_service)
+) -> ObjectListResponse:
+    results = service.sky_region(
+        ra_min=request.ra_min,
+        ra_max=request.ra_max,
+        dec_min=request.dec_min,
+        dec_max=request.dec_max,
+        limit=request.limit,
+    )
     return ObjectListResponse(count=len(results), objects=results)
 
 

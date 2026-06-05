@@ -10,7 +10,7 @@
 const API_BASE = window.UNAV_API_BASE || "";
 
 let selectedObject = null;
-let lastObjects = []; // most recently shown objects (for the 2D plot)
+let sky = null; // the SkyMap instance
 
 const $ = (id) => document.getElementById(id);
 const status = (msg) => { $("status").textContent = msg; };
@@ -68,7 +68,7 @@ async function doSearch(event) {
   if (q) params.set("q", q);
   if (source) params.set("source", source);
   if (type) params.set("object_type", type);
-  params.set("limit", "200");
+  params.set("limit", "1000");
   try {
     const body = await api("/objects/search?" + params.toString());
     renderResults(body.objects);
@@ -77,27 +77,35 @@ async function doSearch(event) {
 }
 
 function renderResults(objects) {
-  lastObjects = objects;
   const el = $("results");
-  if (!objects.length) { el.className = "list muted"; el.innerHTML = "<li>no matches</li>"; plot(objects); return; }
+  if (!objects.length) { el.className = "list muted"; el.innerHTML = "<li>no matches</li>"; sky.setObjects([]); return; }
   el.className = "list";
   el.innerHTML = "";
   for (const o of objects) {
     const li = document.createElement("li");
     li.dataset.uid = o.uid;
     li.innerHTML = `<span>${escapeHtml(o.name || o.uid)}</span><span class="tag">${escapeHtml(o.object_type)}</span>`;
-    li.addEventListener("click", () => selectObject(o.uid, li));
+    li.addEventListener("click", () => selectObject(o.uid));
     el.appendChild(li);
   }
-  plot(objects);
+  sky.setObjects(objects); // fits the view to the loaded objects
+  updatePlotNote(objects);
 }
 
-async function selectObject(uid, li) {
+function updatePlotNote(objects) {
+  const placeable = objects.filter((o) => o.ra_deg !== null && o.dec_deg !== null).length;
+  $("plot-note").textContent = `· ${placeable}/${objects.length} on sky`;
+}
+
+async function selectObject(uid) {
   document.querySelectorAll("#results li.active").forEach((x) => x.classList.remove("active"));
-  if (li) li.classList.add("active");
+  for (const li of document.querySelectorAll("#results li")) {
+    if (li.dataset.uid === uid) { li.classList.add("active"); li.scrollIntoView({ block: "nearest" }); }
+  }
   try {
     selectedObject = await api("/objects/" + encodeURIComponent(uid));
     renderSelected(selectedObject);
+    sky.setSelected(uid);
     $("focus-btn").disabled = !hasCartesian(selectedObject);
     status("selected " + uid);
   } catch (err) { status("inspect failed: " + err.message); }
@@ -173,41 +181,54 @@ async function queryVisible() {
   } catch (err) { status("visible-sector failed: " + err.message); }
 }
 
-// --- 2D sky plot (RA/Dec scatter) ---
+// --- sky region loading ---
 
-const TYPE_COLOR = {
-  star: "#cfe8ff", galaxy: "#ffd28a", quasar: "#ff9bd1", planet: "#9affc4",
-  moon: "#cccccc", asteroid: "#bda27a", comet: "#9ad0ff", nebula: "#c9a8ff",
-};
+async function loadFullSky() {
+  await queryRegion({ ra_min: 0, ra_max: 360, dec_min: -90, dec_max: 90 }, true);
+}
 
-function plot(objects) {
-  const canvas = $("sky");
-  const ctx = canvas.getContext("2d");
-  const W = canvas.width, H = canvas.height, pad = 28;
-  ctx.clearRect(0, 0, W, H);
+async function loadRegionInView() {
+  await queryRegion(sky.getViewBounds(), false);
+}
 
-  // frame + simple grid
-  ctx.strokeStyle = "#1c2740";
-  ctx.strokeRect(pad, pad, W - 2 * pad, H - 2 * pad);
-  ctx.fillStyle = "#4a597a";
-  ctx.font = "11px system-ui";
-  ctx.fillText("RA 0°", pad, H - 10);
-  ctx.fillText("360°", W - pad - 24, H - 10);
-  ctx.fillText("Dec +90°", 2, pad + 4);
-  ctx.fillText("-90°", 2, H - pad);
+async function queryRegion(bounds, fit) {
+  try {
+    const body = await api("/sky/query-region", {
+      method: "POST",
+      body: JSON.stringify({ ...bounds, limit: 5000 }),
+    });
+    renderResultsList(body.objects);
+    sky.setObjects(body.objects, { fit });
+    updatePlotNote(body.objects);
+    status(`sky region: ${body.count} object(s)`);
+  } catch (err) { status("sky region failed: " + err.message); }
+}
 
-  const placeable = objects.filter((o) => o.ra_deg !== null && o.dec_deg !== null);
-  $("plot-note").textContent = `· ${placeable.length}/${objects.length} plotted`;
+// like renderResults but never refits the sky (used by region loads)
+function renderResultsList(objects) {
+  const el = $("results");
+  el.className = objects.length ? "list" : "list muted";
+  el.innerHTML = "";
+  for (const o of objects) {
+    const li = document.createElement("li");
+    li.dataset.uid = o.uid;
+    li.innerHTML = `<span>${escapeHtml(o.name || o.uid)}</span><span class="tag">${escapeHtml(o.object_type)}</span>`;
+    li.addEventListener("click", () => selectObject(o.uid));
+    el.appendChild(li);
+  }
+  if (!objects.length) el.innerHTML = "<li>no objects in region</li>";
+}
 
-  for (const o of placeable) {
-    const x = pad + (o.ra_deg / 360) * (W - 2 * pad);
-    const y = pad + ((90 - o.dec_deg) / 180) * (H - 2 * pad);
-    const mag = o.apparent_magnitude;
-    const r = mag === null || mag === undefined ? 2.5 : Math.max(1.2, 5 - mag / 6);
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = TYPE_COLOR[o.object_type] || "#ffffff";
-    ctx.fill();
+// --- legend ---
+
+function renderLegend() {
+  const el = $("legend");
+  el.innerHTML = "";
+  for (const [type, color] of Object.entries(window.SKY_TYPE_COLORS)) {
+    const span = document.createElement("span");
+    span.className = "legend-item";
+    span.innerHTML = `<span class="swatch" style="background:${color}"></span>${type}`;
+    el.appendChild(span);
   }
 }
 
@@ -218,19 +239,27 @@ function hasCartesian(o) { return o.x !== null && o.y !== null && o.z !== null; 
 function fmtPair(a, b) { return a === null || b === null ? "" : `${round(a)}, ${round(b)}`; }
 function fmtTriple(a, b, c) { return a === null || b === null || c === null ? "" : `${round(a)}, ${round(b)}, ${round(c)}`; }
 function round(v) { return Math.round(v * 1000) / 1000; }
-function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
 // --- wire up ---
 
 function init() {
+  sky = new SkyMap($("sky"), { onSelect: (uid) => selectObject(uid) });
+  window.addEventListener("resize", () => sky.resize());
+  renderLegend();
+
   $("search-form").addEventListener("submit", doSearch);
   $("focus-btn").addEventListener("click", focusSelected);
   $("set-state-btn").addEventListener("click", setState);
   $("visible-btn").addEventListener("click", queryVisible);
+  $("full-sky-btn").addEventListener("click", loadFullSky);
+  $("load-region-btn").addEventListener("click", loadRegionInView);
+  $("fit-btn").addEventListener("click", () => sky.fit());
+
   loadHealth();
   loadDatasets();
   loadState();
-  plot([]);
+  loadFullSky(); // populate the sky map on first load
 }
 
 document.addEventListener("DOMContentLoaded", init);

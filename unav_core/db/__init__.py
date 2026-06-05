@@ -20,6 +20,7 @@ from unav_core.db.queries import (
     get_object,
     highest_redshift_objects,
     nearest_objects,
+    objects_in_sky_box,
     objects_within_distance,
     search_by_name,
 )
@@ -36,6 +37,7 @@ __all__ = [
     "filter_by_type",
     "nearest_objects",
     "objects_within_distance",
+    "objects_in_sky_box",
     "brightest_objects",
     "highest_redshift_objects",
     "cone_search",

@@ -116,6 +116,34 @@ def highest_redshift_objects(db: Database, *, limit: int = _DEFAULT_TOP_N) -> li
     )
 
 
+def objects_in_sky_box(
+    db: Database,
+    ra_min: float,
+    ra_max: float,
+    dec_min: float,
+    dec_max: float,
+    *,
+    limit: int | None = None,
+) -> list[CatalogObject]:
+    """Return objects within an RA/Dec box (a plate-carrée region).
+
+    ``ra_min > ra_max`` selects a box that wraps across the 0/360 seam. Only
+    objects with both ``ra_deg`` and ``dec_deg`` are returned (ordered by RA).
+    """
+    cols = objects_table.c
+    base = (
+        cols.ra_deg.is_not(None)
+        & cols.dec_deg.is_not(None)
+        & (cols.dec_deg >= dec_min)
+        & (cols.dec_deg <= dec_max)
+    )
+    if ra_min <= ra_max:
+        ra_clause = (cols.ra_deg >= ra_min) & (cols.ra_deg <= ra_max)
+    else:  # wrap across the 0/360 seam
+        ra_clause = (cols.ra_deg >= ra_min) | (cols.ra_deg <= ra_max)
+    return db.fetch_objects(where=base & ra_clause, order_by=cols.ra_deg, limit=limit)
+
+
 def _has_cartesian() -> Any:
     cols = objects_table.c
     return cols.x.is_not(None) & cols.y.is_not(None) & cols.z.is_not(None)

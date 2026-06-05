@@ -20,6 +20,7 @@ from unav_core.db import (
     filter_by_type,
     get_object,
     import_jsonl_to_db,
+    objects_in_sky_box,
     search_by_name,
 )
 from unav_core.db.database import PathLike
@@ -119,6 +120,22 @@ class StateService:
         return visible_objects(
             self.db, target_state, sort=sort, object_types=types, max_magnitude=max_magnitude
         )
+
+    def visible_sector_current(self) -> list[CatalogObject]:
+        """The visible sector for the server's current navigator state."""
+        return self.visible_sector()
+
+    def sky_region(
+        self,
+        *,
+        ra_min: float,
+        ra_max: float,
+        dec_min: float,
+        dec_max: float,
+        limit: int | None = None,
+    ) -> list[CatalogObject]:
+        """Objects within an RA/Dec box (for the 2D sky view)."""
+        return objects_in_sky_box(self.db, ra_min, ra_max, dec_min, dec_max, limit=limit)
 
     # --- routes / missions (in-memory for this phase) ---
 
