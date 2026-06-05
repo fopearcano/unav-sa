@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>UNAV-SA — Standalone Navigator</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">UNAV&#8209;SA <span class="subtitle">standalone navigator</span></div>
+      <div id="health" class="health" title="API health">
+        <span class="dot" id="health-dot"></span>
+        <span id="health-text">checking…</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <!-- Left column: data -->
+      <section class="column">
+        <div class="panel">
+          <h2>Datasets</h2>
+          <ul id="datasets" class="list muted">loading…</ul>
+        </div>
+
+        <div class="panel">
+          <h2>Search</h2>
+          <form id="search-form" class="form">
+            <input id="q" type="text" placeholder="name contains… (e.g. Sample Star)" />
+            <div class="row">
+              <input id="source" type="text" placeholder="source (optional)" />
+              <input id="object_type" type="text" placeholder="type (optional)" />
+            </div>
+            <button type="submit">Search</button>
+          </form>
+          <ul id="results" class="list">no results yet</ul>
+        </div>
+
+        <div class="panel">
+          <h2>Selected object</h2>
+          <div id="selected" class="kv muted">click a result to inspect it</div>
+          <button id="focus-btn" class="secondary" disabled>Focus navigator on object</button>
+        </div>
+      </section>
+
+      <!-- Right column: navigation + viewports -->
+      <section class="column">
+        <div class="panel">
+          <h2>Navigator state</h2>
+          <div class="form grid">
+            <label>pos x <input id="pos-x" type="number" step="any" value="0" /></label>
+            <label>pos y <input id="pos-y" type="number" step="any" value="0" /></label>
+            <label>pos z <input id="pos-z" type="number" step="any" value="0" /></label>
+            <label>dir x <input id="dir-x" type="number" step="any" value="0" /></label>
+            <label>dir y <input id="dir-y" type="number" step="any" value="0" /></label>
+            <label>dir z <input id="dir-z" type="number" step="any" value="-1" /></label>
+            <label>far (pc) <input id="far" type="number" step="any" value="1000" /></label>
+            <label>cone (deg) <input id="cone" type="number" step="any" value="45" /></label>
+            <label>max <input id="maxv" type="number" step="1" value="1000" /></label>
+          </div>
+          <div class="row">
+            <button id="set-state-btn">Set state</button>
+            <button id="visible-btn" class="primary">Query visible sector</button>
+          </div>
+          <div id="visible-summary" class="muted">visible: —</div>
+        </div>
+
+        <div class="panel">
+          <h2>2D sky (RA/Dec) <span class="muted" id="plot-note"></span></h2>
+          <canvas id="sky" width="560" height="300"></canvas>
+        </div>
+
+        <div class="panel">
+          <h2>3D view</h2>
+          <div id="viewport3d" class="viewport3d">
+            <div>
+              <div class="big">3D viewport placeholder</div>
+              <div class="muted">Cartesian x/y/z (parsecs). Three.js integration is planned.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="statusbar"><span id="status">ready</span></footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

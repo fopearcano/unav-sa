@@ -8,8 +8,10 @@
 * map/space viewport     (:mod:`unav_app.viewport`)
 * UI views and widgets   (:mod:`unav_app.ui`)
 
-The app *uses* the core; it contains no astronomy logic of its own. The UI is
-intentionally not implemented at this stage of the project.
+The app *uses* the core; it contains no astronomy logic of its own. The first
+shell is a minimal static web frontend in ``unav_app/static`` (plain HTML/CSS/JS,
+no build step), served by the local API server — see
+``docs/STANDALONE_APP_SHELL.md``.
 """
 
 __all__: list[str] = []
