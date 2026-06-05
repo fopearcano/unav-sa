@@ -61,6 +61,10 @@ class MalformedResponseError(ConnectorError):
     """Raised when a response cannot be read or normalised into the schema."""
 
 
+class ConnectorNotSupportedError(ConnectorError):
+    """Raised when a pathway is intentionally not enabled (use a documented alternative)."""
+
+
 def astroquery_available() -> bool:
     """Return ``True`` if astroquery can be imported, ``False`` otherwise."""
     try:
@@ -118,6 +122,21 @@ def to_float(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return result if math.isfinite(result) else None
+
+
+def field(row: dict[str, Any], *names: str, default: Any = None) -> Any:
+    """Return the first present value among ``names``, matching keys case-insensitively.
+
+    Useful because archives differ in casing (e.g. SDSS ``ra`` vs DESI ``TARGET_RA``).
+    """
+    for name in names:
+        if name in row:
+            return row[name]
+    lowered = {key.lower(): value for key, value in row.items()}
+    for name in names:
+        if name.lower() in lowered:
+            return lowered[name.lower()]
+    return default
 
 
 def extract_rows(results: Any) -> list[dict[str, Any]]:
