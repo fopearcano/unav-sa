@@ -4,9 +4,12 @@ Tiny, **deterministic**, fully **offline** sample catalogs for exercising the
 app and the database without any external network access. Implemented in
 `unav_core.data.sample_generator`.
 
-> Phase 4 scope. The generator lives in the pure data layer — it depends on
-> nothing in `unav_core.astro`, `unav_core.db`, or any network. It uses only the
-> standard-library RNG.
+> Phase 4 scope. The generator builds objects with only the standard-library
+> RNG, then routes coordinate maths through `unav_core.astro` (Astropy) to fill
+> Cartesian `x/y/z`. Astropy is imported **lazily** (only when generating, only
+> when `enrich=True`), so importing the module stays cheap and free of any
+> `unav_core.astro` / `unav_core.db` / network dependency. See
+> [`COORDINATE_PIPELINE.md`](COORDINATE_PIPELINE.md).
 
 ## What it generates
 
@@ -26,10 +29,14 @@ so synthetic data is never mistaken for a real survey.
 
 Every generated object includes a valid `uid`, `source`, `object_type`, `name`,
 `ra_deg`/`dec_deg`, a distance **or** redshift as appropriate for its type,
-`metadata` (with `sample: true` and a `category`), and a `provenance` record.
+`metadata` (with `sample: true` and a `category`), and a `provenance` record
+(carrying `reference_frame="ICRS"`, `epoch="J2000.0"` and the `CANONICAL_UNITS`).
 
-Cartesian `x/y/z` are **not** set by the generator (that would require Astropy).
-Compute them at import time with `--enrich` (see below).
+By default the generator fills ICRS Cartesian `x/y/z` (parsecs) for every object
+with a usable distance — stars, solar-system bodies and custom objects — by
+calling the Astropy-backed `enrich_object_coordinates`. Redshift-only objects
+(galaxies, quasars) stay sky-only (`x/y/z` unset; a redshift is not turned into a
+Euclidean distance). Pass `--no-enrich` for sky-only objects.
 
 ## Determinism
 
@@ -58,7 +65,9 @@ python tools/generate_sample_catalog.py \
     --count 100 --seed 42 --output samples/sample_catalog.jsonl
 ```
 
-`samples/sample_catalog.jsonl` is generated with `--count 100 --seed 42`.
+`samples/sample_catalog.jsonl` is generated with `--count 100 --seed 42` (65 of
+the 100 objects carry `x/y/z`; the 35 redshift-only galaxies/quasars do not).
+Add `--no-enrich` to omit the Cartesian positions.
 
 ## Use with the database
 
@@ -71,11 +80,15 @@ python tools/import_catalog.py \
     --dataset-name sample --enrich        # --enrich fills x/y/z for 3D queries
 ```
 
+`--enrich` on import is **idempotent**: objects already carrying `x/y/z` (as the
+default sample does) pass through unchanged, while any without are enriched.
+
 ## Programmatic API
 
 ```python
 from unav_core.data import generate_sample_catalog, write_sample_catalog
 
-objects = generate_sample_catalog(count=100, seed=42)   # list[CatalogObject]
+objects = generate_sample_catalog(count=100, seed=42)   # list[CatalogObject], x/y/z filled
+sky_only = generate_sample_catalog(count=100, seed=42, enrich=False)  # no x/y/z
 write_sample_catalog("samples/sample_catalog.jsonl", count=100, seed=42)
 ```

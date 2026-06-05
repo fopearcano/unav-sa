@@ -44,6 +44,11 @@ def main(
         "--seed",
         help="RNG seed; the same seed yields the same catalog.",
     ),
+    enrich: bool = typer.Option(
+        True,
+        "--enrich/--no-enrich",
+        help="Compute ICRS Cartesian x/y/z (Astropy) for objects with a distance.",
+    ),
     output: Path = typer.Option(
         ...,
         "--output",
@@ -52,8 +57,9 @@ def main(
     ),
 ) -> None:
     """Write a deterministic sample catalog of ``--count`` objects to ``--output``."""
-    written = write_sample_catalog(output, count, seed=seed)
-    console.print(f"[green]Wrote {written} objects[/green] to {output} (seed={seed}).")
+    written = write_sample_catalog(output, count, seed=seed, enrich=enrich)
+    suffix = " (with x/y/z)" if enrich else ""
+    console.print(f"[green]Wrote {written} objects[/green] to {output} (seed={seed}){suffix}.")
 
 
 if __name__ == "__main__":

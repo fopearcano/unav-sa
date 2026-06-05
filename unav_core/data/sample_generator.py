@@ -5,11 +5,15 @@ of nearby stars, galaxies, quasars, solar-system placeholder bodies and custom
 objects. The same ``seed`` always yields the same catalog: generation uses only
 the standard-library RNG and attaches **no** wall-clock timestamps.
 
-The generator lives in the pure data layer — it depends on nothing in
-``unav_core.astro``, ``unav_core.db`` or any network. Cartesian ``x/y/z`` are
-intentionally left unset; compute them on import with ``--enrich`` if needed.
+The generator builds objects in the pure data layer, then routes **all**
+coordinate maths through ``unav_core.astro`` (Astropy): by default it fills the
+ICRS Cartesian ``x/y/z`` (parsecs) of every object that has a usable distance via
+:func:`unav_core.astro.enrich.enrich_object_coordinates`. Astropy is imported
+**lazily** — only when generating, and only when ``enrich=True`` — so importing
+this module stays cheap and free of any ``unav_core.astro`` / ``unav_core.db`` /
+network dependency. Pass ``enrich=False`` for sky-only objects (no ``x/y/z``).
 
-See ``docs/SAMPLE_DATA.md``.
+See ``docs/SAMPLE_DATA.md`` and ``docs/COORDINATE_PIPELINE.md``.
 """
 
 from __future__ import annotations
@@ -18,7 +22,7 @@ import random
 
 from unav_core.data.io import write_jsonl
 from unav_core.data.object_types import ObjectType
-from unav_core.data.schema import CatalogObject
+from unav_core.data.schema import CANONICAL_UNITS, CatalogObject
 from unav_core.provenance.provenance import Provenance
 
 #: Identifies this generator in provenance/metadata.
@@ -29,6 +33,10 @@ DEFAULT_COUNT = 100
 
 #: Hard upper bound on the number of objects (task constraint).
 MAX_COUNT = 5000
+
+#: Reference frame and epoch the synthetic ICRS positions are stamped with.
+_REFERENCE_FRAME = "ICRS"
+_REFERENCE_EPOCH = "J2000.0"
 
 #: 1 astronomical unit expressed in parsecs (IAU-defined factor).
 _AU_IN_PC = 4.84813681e-6
@@ -68,11 +76,19 @@ _SOLAR_CODE: dict[ObjectType, str] = {
 }
 
 
-def generate_sample_catalog(count: int = DEFAULT_COUNT, *, seed: int = 0) -> list[CatalogObject]:
+def generate_sample_catalog(
+    count: int = DEFAULT_COUNT, *, seed: int = 0, enrich: bool = True
+) -> list[CatalogObject]:
     """Generate a deterministic list of ``count`` synthetic ``CatalogObject``.
 
     The same ``(count, seed)`` always produces the same objects. ``count`` must
     be in ``[0, MAX_COUNT]``.
+
+    When ``enrich`` is true (the default), every object with a usable distance
+    gets its ICRS Cartesian ``x/y/z`` (parsecs) computed through the
+    Astropy-backed :func:`unav_core.astro.enrich.enrich_object_coordinates`.
+    Objects carrying only a redshift (galaxies, quasars) keep ``x/y/z`` unset.
+    Pass ``enrich=False`` to get sky-only objects (no Cartesian positions).
     """
     if count < 0:
         raise ValueError("count must be >= 0")
@@ -97,12 +113,28 @@ def generate_sample_catalog(count: int = DEFAULT_COUNT, *, seed: int = 0) -> lis
         for type_index in range(1, allocation[category] + 1):
             global_index += 1
             objects.append(builders[category](rng, global_index, type_index, provenance))
+
+    if enrich:
+        objects = _enrich_cartesian(objects)
     return objects
 
 
-def write_sample_catalog(path, count: int = DEFAULT_COUNT, *, seed: int = 0) -> int:
+def write_sample_catalog(
+    path, count: int = DEFAULT_COUNT, *, seed: int = 0, enrich: bool = True
+) -> int:
     """Generate a sample catalog and write it as JSONL. Returns the count written."""
-    return write_jsonl(generate_sample_catalog(count, seed=seed), path)
+    return write_jsonl(generate_sample_catalog(count, seed=seed, enrich=enrich), path)
+
+
+def _enrich_cartesian(objects: list[CatalogObject]) -> list[CatalogObject]:
+    """Fill ICRS Cartesian ``x/y/z`` via the Astropy-backed astro layer.
+
+    The import is local so that importing this module (and the pure data layer)
+    never pulls in Astropy; it happens only when coordinates are computed.
+    """
+    from unav_core.astro.enrich import enrich_object_coordinates
+
+    return [enrich_object_coordinates(obj) for obj in objects]
 
 
 def _allocate(count: int) -> dict[str, int]:
@@ -129,12 +161,16 @@ def _allocate(count: int) -> dict[str, int]:
 
 def _provenance(source: str, seed: int) -> Provenance:
     # No retrieved_at: keeps generation deterministic and honest (no real fetch).
+    # The coordinate system (reference_frame + epoch) and the unit convention are
+    # recorded so downstream layers can interpret ra/dec/distance and x/y/z.
     return Provenance(
         source=source,
         catalog="unav-sample",
         version="v1",
-        reference_frame="ICRS",
+        reference_frame=_REFERENCE_FRAME,
+        epoch=_REFERENCE_EPOCH,
         query_parameters={"seed": seed, "generator": GENERATOR_NAME},
+        units=dict(CANONICAL_UNITS),
         notes="synthetic sample data; not from a real survey",
     )
 

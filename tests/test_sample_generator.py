@@ -2,7 +2,9 @@
 
 import pytest
 
+from unav_core.astro.coordinates import radec_distance_to_cartesian
 from unav_core.data import (
+    CANONICAL_UNITS,
     CatalogObject,
     ObjectType,
     generate_sample_catalog,
@@ -113,3 +115,36 @@ def test_imports_into_database() -> None:
     assert summary.duplicates_in_file == 0
     assert db.count_objects() == 100
     db.dispose()
+
+
+def test_enriches_cartesian_through_astropy_by_default() -> None:
+    objects = generate_sample_catalog(200, seed=9)
+    enriched = 0
+    for obj in objects:
+        if obj.distance_pc is not None:
+            # Objects with a distance get Astropy-computed ICRS Cartesian x/y/z.
+            assert obj.has_cartesian
+            expected = radec_distance_to_cartesian(obj.ra_deg, obj.dec_deg, obj.distance_pc)
+            assert (obj.x, obj.y, obj.z) == pytest.approx(expected, abs=1e-9)
+            enriched += 1
+        else:
+            # Redshift-only objects (galaxies, quasars) stay sky-only.
+            assert not obj.has_cartesian
+    assert enriched > 0  # the sample really does contain usable 3D positions
+
+
+def test_no_enrich_leaves_cartesian_unset() -> None:
+    for obj in generate_sample_catalog(100, seed=42, enrich=False):
+        assert obj.x is None and obj.y is None and obj.z is None
+
+
+def test_provenance_records_frame_epoch_and_units() -> None:
+    for obj in generate_sample_catalog(100, seed=42):
+        prov = obj.provenance
+        assert prov is not None
+        assert prov.reference_frame == "ICRS"
+        assert prov.epoch == "J2000.0"
+        # The unit convention travels with the data (coordinate fields included).
+        assert prov.units == CANONICAL_UNITS
+        assert prov.units["x"] == "pc"
+        assert prov.units["ra_deg"] == "deg"
