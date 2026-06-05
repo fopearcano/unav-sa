@@ -2,16 +2,16 @@
 
 Defines the local-cache schema:
 
-* ``objects``    — the navigation-relevant *subset* of ``CatalogObject``;
+* ``objects``    — the scalar ``CatalogObject`` fields + per-object provenance JSON;
 * ``metadata``   — per-object metadata JSON (1:1 with ``objects``);
 * ``datasets``   — descriptors of an import/query that produced objects;
 * ``provenance`` — per-dataset provenance JSON;
 
 plus the indexes that make filtering and spatial prefiltering fast.
 
-The ``objects`` table intentionally stores only the columns navigation needs;
-full-fidelity records remain in the JSONL interchange (see
-``docs/LOCAL_DATABASE.md``).
+The ``objects`` table stores every scalar field of ``CatalogObject`` (so the
+inspector can show the full record, including provenance); ``metadata`` keeps the
+free-form extras. See ``docs/LOCAL_DATABASE.md``.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from sqlalchemy import Column, Float, Index, Integer, MetaData, String, Table, T
 
 from unav_core.data.object_types import ObjectType
 from unav_core.data.schema import CatalogObject
+from unav_core.provenance.provenance import Provenance
 
 metadata_obj = MetaData()
 
@@ -38,10 +39,17 @@ objects_table = Table(
     Column("distance_pc", Float),
     Column("parallax_mas", Float),
     Column("redshift", Float),
+    Column("radial_velocity_kms", Float),
+    Column("proper_motion_ra_masyr", Float),
+    Column("proper_motion_dec_masyr", Float),
     Column("apparent_magnitude", Float),
+    Column("absolute_magnitude", Float),
+    Column("color_index", Float),
+    Column("spectral_type", String),
     Column("x", Float),
     Column("y", Float),
     Column("z", Float),
+    Column("provenance_json", Text),
 )
 
 metadata_table = Table(
@@ -93,19 +101,28 @@ def object_core_values(obj: CatalogObject) -> dict[str, Any]:
         "distance_pc": obj.distance_pc,
         "parallax_mas": obj.parallax_mas,
         "redshift": obj.redshift,
+        "radial_velocity_kms": obj.radial_velocity_kms,
+        "proper_motion_ra_masyr": obj.proper_motion_ra_masyr,
+        "proper_motion_dec_masyr": obj.proper_motion_dec_masyr,
         "apparent_magnitude": obj.apparent_magnitude,
+        "absolute_magnitude": obj.absolute_magnitude,
+        "color_index": obj.color_index,
+        "spectral_type": obj.spectral_type,
         "x": obj.x,
         "y": obj.y,
         "z": obj.z,
+        "provenance_json": obj.provenance.model_dump_json() if obj.provenance else None,
     }
 
 
 def row_to_object(row: Mapping[str, Any], metadata: dict[str, Any] | None = None) -> CatalogObject:
     """Rebuild a ``CatalogObject`` from an ``objects`` row mapping (+ metadata).
 
-    The stored subset is rehydrated; fields not persisted in the ``objects``
-    table are left as ``None``.
+    Every scalar field is rehydrated, including per-object provenance (parsed from
+    ``provenance_json``). Free-form ``metadata`` is supplied separately.
     """
+    provenance_json = row["provenance_json"] if "provenance_json" in row else None
+    provenance = Provenance.model_validate_json(provenance_json) if provenance_json else None
     return CatalogObject(
         uid=row["uid"],
         source=row["source"],
@@ -116,9 +133,16 @@ def row_to_object(row: Mapping[str, Any], metadata: dict[str, Any] | None = None
         distance_pc=row["distance_pc"],
         parallax_mas=row["parallax_mas"],
         redshift=row["redshift"],
+        radial_velocity_kms=row["radial_velocity_kms"],
+        proper_motion_ra_masyr=row["proper_motion_ra_masyr"],
+        proper_motion_dec_masyr=row["proper_motion_dec_masyr"],
         apparent_magnitude=row["apparent_magnitude"],
+        absolute_magnitude=row["absolute_magnitude"],
+        color_index=row["color_index"],
+        spectral_type=row["spectral_type"],
         x=row["x"],
         y=row["y"],
         z=row["z"],
         metadata=metadata or {},
+        provenance=provenance,
     )

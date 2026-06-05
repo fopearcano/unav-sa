@@ -41,6 +41,7 @@ Thumbs.db
 # Local cache, working databases and any downloaded catalog subsets are
 # user/runtime state and must never be committed. By design UNAV-SA keeps only
 # a bounded local working set — never a full survey mirror.
+/data/
 .unav/
 var/
 *.sqlite

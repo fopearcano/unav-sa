@@ -85,6 +85,23 @@ def test_masked_fields_become_none(monkeypatch) -> None:
     assert objects[1].radial_velocity_kms is None
 
 
+def test_distance_from_positive_parallax(monkeypatch) -> None:
+    _install_fake_gaia(monkeypatch, _gaia_table(masked=False))
+    objects = gaia.fetch_gaia_region(45.0, 0.0, 0.1, limit=5)
+    assert objects[0].distance_pc == pytest.approx(1000.0 / 3.5, rel=1e-9)  # parallax 3.5 mas
+    assert objects[1].distance_pc == pytest.approx(1000.0, rel=1e-9)  # parallax 1.0 mas
+
+
+def test_no_distance_without_positive_parallax(monkeypatch) -> None:
+    table = _gaia_table(masked=False)
+    table["parallax"] = [-2.0, 0.0]  # negative + zero parallax -> no distance
+    _install_fake_gaia(monkeypatch, table)
+    objects = gaia.fetch_gaia_region(45.0, 0.0, 0.1, limit=5)
+    assert objects[0].parallax_mas == -2.0  # kept (real noisy measurement)
+    assert objects[0].distance_pc is None
+    assert objects[1].distance_pc is None
+
+
 def test_adql_region_and_limit(monkeypatch) -> None:
     captured = _install_fake_gaia(monkeypatch, _gaia_table())
     gaia.fetch_gaia_region(45.0, 0.0, 0.1, limit=5)

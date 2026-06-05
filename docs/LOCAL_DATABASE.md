@@ -21,13 +21,15 @@ queries. Implemented in `unav_core.db` with **SQLAlchemy 2.x Core over SQLite**.
 ### `objects` (one row per catalog object)
 
 `uid` (PK), `source`, `object_type`, `name`, `ra_deg`, `dec_deg`,
-`distance_pc`, `parallax_mas`, `redshift`, `apparent_magnitude`, `x`, `y`, `z`.
+`distance_pc`, `parallax_mas`, `redshift`, `radial_velocity_kms`,
+`proper_motion_ra_masyr`, `proper_motion_dec_masyr`, `apparent_magnitude`,
+`absolute_magnitude`, `color_index`, `spectral_type`, `x`, `y`, `z`,
+`provenance_json`.
 
-> This is the **navigation-relevant subset** of `CatalogObject`. Fields not
-> listed (proper motions, radial velocity, absolute magnitude, colour index,
-> spectral type) are intentionally **not** persisted here; the full-fidelity
-> record remains in the JSONL interchange. Rehydrated objects have those fields
-> as `None`.
+> The table stores **every scalar field** of `CatalogObject` plus a per-object
+> `provenance_json`, so a rehydrated object (and the inspector via
+> `GET /objects/{uid}`) shows the full record — including provenance — for real
+> connector data like Gaia. Free-form `metadata` lives in its own table.
 
 ### `metadata`
 
@@ -42,8 +44,8 @@ UTC), `query_parameters_json`. One row per import/query.
 ### `provenance`
 
 `dataset_id` (PK), `provenance_json`. Provenance is recorded at **dataset**
-granularity in this phase (the batch's origin); per-object provenance lives in
-the JSONL interchange.
+granularity (the batch's origin); **per-object** provenance is also persisted in
+`objects.provenance_json` (so each object carries its own origin/audit record).
 
 ## Indexes
 

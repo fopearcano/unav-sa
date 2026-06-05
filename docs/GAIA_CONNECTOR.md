@@ -37,6 +37,7 @@ WHERE 1 = CONTAINS(POINT('ICRS', ra, dec),
 | `source_id` | `name = "Gaia DR3 {source_id}"` |
 | `ra`, `dec` | `ra_deg`, `dec_deg` (ICRS) |
 | `parallax` | `parallax_mas` (kept raw; may be ≤ 0) |
+| `parallax` | `distance_pc = 1000 / parallax` **only when parallax > 0** |
 | `phot_g_mean_mag` | `apparent_magnitude` |
 | `bp_rp` | `color_index` |
 | `pmra`, `pmdec` | `proper_motion_ra_masyr`, `proper_motion_dec_masyr` |
@@ -45,14 +46,17 @@ WHERE 1 = CONTAINS(POINT('ICRS', ra, dec),
 Missing/masked/NaN cells become `None`. Provenance records `Gaia DR3`, table
 `gaiadr3.gaia_source`, epoch `J2016.0`, and the exact query parameters.
 
-Distance and `x/y/z` are **not** computed here — enrich on import
-(`tools/import_catalog.py --enrich`) to derive them from `parallax`.
+`distance_pc` is derived from a **positive** parallax only (negative/zero Gaia
+parallaxes yield no distance). Cartesian `x/y/z` are **not** computed here —
+enrich on import (`--enrich`) to derive them. See
+[`GAIA_WORKFLOW.md`](GAIA_WORKFLOW.md) for the full fetch → import → view flow.
 
 ## CLI
 
 ```bash
-python tools/fetch_gaia_region.py --ra 45.0 --dec 0.0 --radius 0.1 \
-    --limit 500 --output data/gaia_region.jsonl
+python tools/fetch_gaia_region.py --ra 56.75 --dec 24.12 --radius-deg 0.2 \
+    --limit 500 --output data/catalogs/gaia_test.jsonl \
+    [--db data/unav.db --dataset-name gaia_test]   # optional direct import
 ```
 
 ## Errors

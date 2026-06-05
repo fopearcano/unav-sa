@@ -6,6 +6,7 @@ from sqlalchemy import select
 from unav_core.data import CatalogObject, ObjectType, write_jsonl
 from unav_core.db import Database, import_jsonl_to_db, import_objects
 from unav_core.db.schema import datasets_table, provenance_table
+from unav_core.provenance.provenance import Provenance
 
 
 def _objs() -> list[CatalogObject]:
@@ -106,6 +107,38 @@ def test_enrich_on_import(tmp_path) -> None:
     obj = db.fetch_objects()[0]
     assert obj.has_cartesian
     assert obj.distance_pc == pytest.approx(10.0, abs=1e-9)
+    db.dispose()
+
+
+def test_full_fields_and_provenance_roundtrip() -> None:
+    # The objects table persists the full scalar record + per-object provenance,
+    # so the inspector (GET /objects/{uid}) can show Gaia fields and provenance.
+    db = Database(":memory:")
+    obj = CatalogObject(
+        uid="gaia:1",
+        source="Gaia DR3",
+        object_type=ObjectType.STAR,
+        ra_deg=10.0,
+        dec_deg=20.0,
+        parallax_mas=5.0,
+        distance_pc=200.0,
+        apparent_magnitude=9.5,
+        color_index=0.7,
+        proper_motion_ra_masyr=1.0,
+        proper_motion_dec_masyr=-2.0,
+        radial_velocity_kms=10.0,
+        provenance=Provenance(source="Gaia DR3", catalog="Gaia DR3", epoch="J2016.0"),
+    )
+    import_objects(db, [obj], dataset_name="g")
+    fetched = db.fetch_objects()[0]
+    assert fetched.color_index == 0.7
+    assert fetched.proper_motion_ra_masyr == 1.0
+    assert fetched.proper_motion_dec_masyr == -2.0
+    assert fetched.radial_velocity_kms == 10.0
+    assert fetched.distance_pc == 200.0
+    assert fetched.provenance is not None
+    assert fetched.provenance.source == "Gaia DR3"
+    assert fetched.provenance.epoch == "J2016.0"
     db.dispose()
 
 

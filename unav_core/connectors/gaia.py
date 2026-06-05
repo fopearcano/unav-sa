@@ -1,12 +1,14 @@
 """Gaia DR3 connector: a regional, limited cone search via ``astroquery.gaia``.
 
 Fetches stars in a small sky region and normalises them to UNAV
-:class:`~unav_core.data.schema.CatalogObject` records. Only raw Gaia fields are
-mapped (positions, parallax, photometry, proper motion, radial velocity);
-distance and Cartesian ``x/y/z`` are left to the optional Astropy enrichment step
+:class:`~unav_core.data.schema.CatalogObject` records. Raw Gaia fields are mapped
+(positions, parallax, photometry, proper motion, radial velocity) and a
+``distance_pc`` is derived from a **positive** parallax (``1000 / parallax_mas``).
+The Cartesian ``x/y/z`` are left to the optional Astropy enrichment step
 (``import ... --enrich``), so this connector needs no Astropy itself.
 
-See ``docs/GAIA_CONNECTOR.md`` and ``docs/DATA_FETCHING_SAFETY.md``.
+See ``docs/GAIA_WORKFLOW.md``, ``docs/GAIA_CONNECTOR.md`` and
+``docs/DATA_FETCHING_SAFETY.md``.
 """
 
 from __future__ import annotations
@@ -114,6 +116,11 @@ def _normalize_gaia_row(row: dict[str, Any], provenance: Provenance) -> CatalogO
     except (TypeError, ValueError) as exc:
         raise MalformedResponseError(f"invalid Gaia source_id: {source_id!r}") from exc
 
+    parallax_mas = to_float(row.get("parallax"))
+    # Distance from a POSITIVE parallax only (1000 / parallax[mas]); Gaia's real
+    # negative/zero parallaxes do not yield a distance. x/y/z come from --enrich.
+    distance_pc = 1000.0 / parallax_mas if parallax_mas is not None and parallax_mas > 0.0 else None
+
     try:
         return CatalogObject(
             uid=f"gaia:{gaia_id}",
@@ -122,7 +129,8 @@ def _normalize_gaia_row(row: dict[str, Any], provenance: Provenance) -> CatalogO
             name=f"Gaia DR3 {gaia_id}",
             ra_deg=ra,
             dec_deg=dec,
-            parallax_mas=to_float(row.get("parallax")),
+            parallax_mas=parallax_mas,
+            distance_pc=distance_pc,
             apparent_magnitude=to_float(row.get("phot_g_mean_mag")),
             color_index=to_float(row.get("bp_rp")),
             proper_motion_ra_masyr=to_float(row.get("pmra")),

@@ -120,14 +120,37 @@ function renderSelected(o) {
     ["uid", o.uid], ["name", o.name], ["type", o.object_type], ["source", o.source],
     ["ra/dec", fmtPair(o.ra_deg, o.dec_deg)], ["distance (pc)", o.distance_pc],
     ["parallax (mas)", o.parallax_mas], ["redshift", o.redshift],
-    ["app. mag", o.apparent_magnitude], ["x/y/z", fmtTriple(o.x, o.y, o.z)],
+    ["app. mag", o.apparent_magnitude], ["color index", o.color_index],
+    ["pm ra (mas/yr)", o.proper_motion_ra_masyr], ["pm dec (mas/yr)", o.proper_motion_dec_masyr],
+    ["radial vel (km/s)", o.radial_velocity_kms], ["x/y/z", fmtTriple(o.x, o.y, o.z)],
   ];
   const el = $("selected");
   el.className = "kv";
   el.innerHTML = fields
     .filter(([, v]) => v !== null && v !== undefined && v !== "")
     .map(([k, v]) => `<div class="k">${k}</div><div>${escapeHtml(String(v))}</div>`)
-    .join("");
+    .join("") + provenanceHtml(o.provenance) + metadataHtml(o.metadata);
+}
+
+// Provenance shown inline in the inspector (origin/audit of the selected object).
+function provenanceHtml(p) {
+  if (!p) return "";
+  const rows = [
+    ["source", p.source], ["catalog", p.catalog], ["version", p.version],
+    ["frame", p.reference_frame], ["epoch", p.epoch], ["endpoint", p.endpoint],
+    ["retrieved", p.retrieved_at], ["notes", p.notes],
+  ].filter(([, v]) => v !== null && v !== undefined && v !== "");
+  if (!rows.length) return "";
+  return `<div class="k section">provenance</div><div></div>` +
+    rows.map(([k, v]) => `<div class="k sub">${k}</div><div>${escapeHtml(String(v))}</div>`).join("");
+}
+
+function metadataHtml(meta) {
+  if (!meta || !Object.keys(meta).length) return "";
+  return `<div class="k section">metadata</div><div></div>` +
+    Object.entries(meta)
+      .map(([k, v]) => `<div class="k sub">${escapeHtml(k)}</div><div>${escapeHtml(String(v))}</div>`)
+      .join("");
 }
 
 async function focusSelected() {
