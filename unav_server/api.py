@@ -6,13 +6,14 @@ and shapes the response. The service is resolved per-request from ``app.state``.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from unav_core.data.schema import CatalogObject
 from unav_core.db.importer import ImportSummary
 from unav_core.missions import Mission
 from unav_core.navigation import NavigatorState
-from unav_core.routes import Route
+from unav_core.navigation.bookmarks import Bookmark
+from unav_core.routes import Route, RouteDistanceSummary
 from unav_server.models import (
     DatasetSummary,
     HealthResponse,
@@ -220,6 +221,31 @@ def sky_query_region(
     return ObjectListResponse(count=len(results), objects=results)
 
 
+# --- bookmarks ---
+
+
+@router.get("/bookmarks", response_model=list[Bookmark])
+def list_bookmarks(service: StateService = Depends(get_service)) -> list[Bookmark]:
+    return service.list_bookmarks()
+
+
+@router.post("/bookmarks", response_model=Bookmark)
+def create_bookmark(bookmark: Bookmark, service: StateService = Depends(get_service)) -> Bookmark:
+    return service.add_bookmark(bookmark)
+
+
+@router.delete("/bookmarks/{bookmark_id}", status_code=204)
+def delete_bookmark_endpoint(
+    bookmark_id: str, service: StateService = Depends(get_service)
+) -> Response:
+    if not service.delete_bookmark(bookmark_id):
+        raise HTTPException(status_code=404, detail=f"bookmark {bookmark_id!r} not found")
+    return Response(status_code=204)
+
+
+# --- routes ---
+
+
 @router.get("/routes", response_model=list[Route])
 def list_routes(service: StateService = Depends(get_service)) -> list[Route]:
     return service.list_routes()
@@ -230,6 +256,51 @@ def create_route(route: Route, service: StateService = Depends(get_service)) -> 
     return service.add_route(route)
 
 
+@router.get("/routes/{route_id}", response_model=Route)
+def get_route_endpoint(route_id: str, service: StateService = Depends(get_service)) -> Route:
+    route = service.get_route(route_id)
+    if route is None:
+        raise HTTPException(status_code=404, detail=f"route {route_id!r} not found")
+    return route
+
+
+@router.put("/routes/{route_id}", response_model=Route)
+def update_route_endpoint(
+    route_id: str, route: Route, service: StateService = Depends(get_service)
+) -> Route:
+    return service.update_route(route_id, route)
+
+
+@router.delete("/routes/{route_id}", status_code=204)
+def delete_route_endpoint(route_id: str, service: StateService = Depends(get_service)) -> Response:
+    if not service.delete_route(route_id):
+        raise HTTPException(status_code=404, detail=f"route {route_id!r} not found")
+    return Response(status_code=204)
+
+
+@router.post("/routes/{route_id}/add-object/{uid}", response_model=Route)
+def add_object_to_route_endpoint(
+    route_id: str, uid: str, service: StateService = Depends(get_service)
+) -> Route:
+    try:
+        return service.add_object_to_route(route_id, uid)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/routes/{route_id}/summary", response_model=RouteDistanceSummary)
+def route_summary_endpoint(
+    route_id: str, service: StateService = Depends(get_service)
+) -> RouteDistanceSummary:
+    route = service.get_route(route_id)
+    if route is None:
+        raise HTTPException(status_code=404, detail=f"route {route_id!r} not found")
+    return route.distance_summary()
+
+
+# --- missions ---
+
+
 @router.get("/missions", response_model=list[Mission])
 def list_missions(service: StateService = Depends(get_service)) -> list[Mission]:
     return service.list_missions()
@@ -238,3 +309,37 @@ def list_missions(service: StateService = Depends(get_service)) -> list[Mission]
 @router.post("/missions", response_model=Mission)
 def create_mission(mission: Mission, service: StateService = Depends(get_service)) -> Mission:
     return service.add_mission(mission)
+
+
+@router.get("/missions/{mission_id}", response_model=Mission)
+def get_mission_endpoint(mission_id: str, service: StateService = Depends(get_service)) -> Mission:
+    mission = service.get_mission(mission_id)
+    if mission is None:
+        raise HTTPException(status_code=404, detail=f"mission {mission_id!r} not found")
+    return mission
+
+
+@router.put("/missions/{mission_id}", response_model=Mission)
+def update_mission_endpoint(
+    mission_id: str, mission: Mission, service: StateService = Depends(get_service)
+) -> Mission:
+    return service.update_mission(mission_id, mission)
+
+
+@router.delete("/missions/{mission_id}", status_code=204)
+def delete_mission_endpoint(
+    mission_id: str, service: StateService = Depends(get_service)
+) -> Response:
+    if not service.delete_mission(mission_id):
+        raise HTTPException(status_code=404, detail=f"mission {mission_id!r} not found")
+    return Response(status_code=204)
+
+
+@router.post("/missions/{mission_id}/add-route/{route_id}", response_model=Mission)
+def add_route_to_mission_endpoint(
+    mission_id: str, route_id: str, service: StateService = Depends(get_service)
+) -> Mission:
+    try:
+        return service.add_route_to_mission(mission_id, route_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

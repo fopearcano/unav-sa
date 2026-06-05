@@ -35,6 +35,7 @@ class SkyMap {
     this.ctx = canvas.getContext("2d");
     this.onSelect = onSelect || (() => {});
     this.objects = [];
+    this.route = []; // [{ra, dec, uid, label}] — active route overlay
     this.raCenter = 180;
     this.decCenter = 0;
     this.scale = 1.5;
@@ -62,6 +63,18 @@ class SkyMap {
   }
 
   setSelected(uid) { this.selectedUid = uid; this.render(); }
+
+  // Route overlay: match each waypoint's object_uid to a loaded object's RA/Dec.
+  setRoute(waypoints) {
+    const byUid = new Map(this.objects.map((o) => [o.uid, o]));
+    this.route = (waypoints || [])
+      .map((w) => {
+        const o = w.object_uid ? byUid.get(w.object_uid) : null;
+        return o ? { ra: o.ra_deg, dec: o.dec_deg, uid: o.uid, label: w.label } : null;
+      })
+      .filter(Boolean);
+    this.render();
+  }
 
   fit() {
     if (!this.objects.length) {
@@ -126,9 +139,27 @@ class SkyMap {
     ctx.fillRect(0, 0, W, H);
     this._drawGrid();
     for (const o of this.objects) this._drawObject(o);
+    this._drawRoute();
     if (this.selectedUid) this._ring(this.selectedUid, "#ffffff");
     if (this.hoverUid && this.hoverUid !== this.selectedUid) this._ring(this.hoverUid, "#5db0ff");
     this._drawHoverLabel();
+  }
+
+  _drawRoute() {
+    if (this.route.length < 1) return;
+    const ctx = this.ctx;
+    const pts = this.route.map((w) => this._project(w.ra, w.dec));
+    if (pts.length >= 2) {
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.strokeStyle = "#ffd166"; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    for (const p of pts) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.strokeStyle = "#ffd166"; ctx.lineWidth = 1.5; ctx.stroke();
+    }
   }
 
   _drawGrid() {

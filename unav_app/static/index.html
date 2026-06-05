@@ -43,6 +43,12 @@
           <h2>Selected object</h2>
           <div id="selected" class="kv muted">click a result to inspect it</div>
           <button id="focus-btn" class="secondary" disabled>Focus navigator on object</button>
+          <button id="bookmark-btn" class="secondary" disabled>Bookmark selected object</button>
+        </div>
+
+        <div class="panel">
+          <h2>Bookmarks</h2>
+          <ul id="bookmarks" class="list muted">none yet</ul>
         </div>
       </section>
 
@@ -118,6 +124,32 @@
             <canvas id="sky"></canvas>
             <div id="legend" class="legend"></div>
           </div>
+        </div>
+
+        <!-- Voyage planning: route + mission -->
+        <div class="panel">
+          <h2>Route</h2>
+          <div class="row">
+            <input id="route-name" type="text" placeholder="new route name…" />
+            <button id="new-route-btn" class="chip">New route</button>
+          </div>
+          <div class="row toolbar">
+            <button id="add-to-route-btn" class="primary" disabled>Add selected to route</button>
+            <span class="muted hint" id="active-route-label">no active route</span>
+          </div>
+          <ol id="route-waypoints" class="list muted">create or select a route</ol>
+          <div id="route-summary" class="muted"></div>
+          <div class="subhead muted">Saved routes</div>
+          <ul id="routes" class="list muted">none yet</ul>
+        </div>
+
+        <div class="panel">
+          <h2>Missions</h2>
+          <div class="row">
+            <input id="mission-title" type="text" placeholder="mission title…" />
+            <button id="create-mission-btn" class="chip" disabled>Create from active route</button>
+          </div>
+          <ul id="missions" class="list muted">none yet</ul>
         </div>
       </section>
     </main>

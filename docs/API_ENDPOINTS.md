@@ -20,10 +20,22 @@ are the canonical `unav_core` models (`CatalogObject`, `NavigatorState`, `Route`
 | POST | `/visible-sector/query-current` | — | `VisibleSectorResponse` (uses the current persisted state) |
 | POST | `/visible-sector/render` | `{state?, sort?, object_types?, max_magnitude?}` | `RenderPayload` (`{count, points:[RenderPoint]}`) |
 | GET | `/visible-sector/current/render` | — | `RenderPayload` |
+| GET | `/bookmarks` | — | `[Bookmark]` |
+| POST | `/bookmarks` | `Bookmark` | `Bookmark` (caches object position) |
+| DELETE | `/bookmarks/{id}` | — | `204` (`404` if absent) |
 | GET | `/routes` | — | `[Route]` |
 | POST | `/routes` | `Route` | `Route` |
+| GET | `/routes/{id}` | — | `Route` (`404`) |
+| PUT | `/routes/{id}` | `Route` | `Route` (replace) |
+| DELETE | `/routes/{id}` | — | `204` (`404`) |
+| POST | `/routes/{id}/add-object/{uid}` | — | `Route` (append a catalog waypoint) |
+| GET | `/routes/{id}/summary` | — | `RouteDistanceSummary` |
 | GET | `/missions` | — | `[Mission]` |
 | POST | `/missions` | `Mission` | `Mission` |
+| GET | `/missions/{id}` | — | `Mission` (`404`) |
+| PUT | `/missions/{id}` | `Mission` | `Mission` (replace) |
+| DELETE | `/missions/{id}` | — | `204` (`404`) |
+| POST | `/missions/{id}/add-route/{route_id}` | — | `Mission` (merge a route's waypoints) |
 
 ## Notes
 
@@ -48,6 +60,11 @@ are the canonical `unav_core` models (`CatalogObject`, `NavigatorState`, `Route`
   variants return the same objects as `points` for adapters. See
   [`RENDER_PAYLOAD.md`](RENDER_PAYLOAD.md). Full records load via
   `GET /objects/{uid}` on selection.
+- **Voyage planning** — bookmarks/routes/missions are persisted in the local DB
+  and survive restarts. `add-object` caches the object's position into the
+  waypoint; `add-route` merges a route's waypoints into a mission. See
+  [`ROUTES_BOOKMARKS_MISSIONS.md`](ROUTES_BOOKMARKS_MISSIONS.md) and
+  [`VOYAGE_PLANNING_MVP.md`](VOYAGE_PLANNING_MVP.md).
 - **Invalid bodies** (e.g. an out-of-range `fov_degrees`) yield FastAPI's `422`.
 - **`/datasets/import-jsonl`** reads a server-local path; missing file → `404`.
 

@@ -113,6 +113,32 @@ function createViewport(container) {
     updateCamera();
   }
 
+  // --- route overlay (a polyline through the active route's waypoints) ---
+  let routeGroup = null;
+  let routeData = []; // [{x, y, z, uid, label}]
+  function setRoute(waypoints) {
+    if (routeGroup) {
+      scene.remove(routeGroup);
+      routeGroup.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    }
+    routeData = (waypoints || [])
+      .filter((w) => w.position)
+      .map((w) => ({ x: w.position.x, y: w.position.y, z: w.position.z, uid: w.object_uid, label: w.label }));
+    routeGroup = new THREE.Group();
+    if (routeData.length) {
+      const pts = routeData.map((p) => new THREE.Vector3(p.x, p.y, p.z));
+      if (pts.length >= 2) {
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+        routeGroup.add(new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0xffd166 })));
+      }
+      const markGeo = new THREE.BufferGeometry().setFromPoints(pts);
+      routeGroup.add(
+        new THREE.Points(markGeo, new THREE.PointsMaterial({ color: 0xffd166, size: 9, sizeAttenuation: false })),
+      );
+    }
+    scene.add(routeGroup);
+  }
+
   function highlight(uid) {
     const p = pointData.find((d) => d.uid === uid);
     if (!p) { marker.visible = false; return; }
@@ -158,13 +184,15 @@ function createViewport(container) {
     const px = clientX - rect.left, py = clientY - rect.top;
     let best = null, bestDist = 14;
     const v = new THREE.Vector3();
-    for (const p of pointData) {
+    // Route waypoints first so a planned stop wins ties with a background point.
+    for (const p of routeData.concat(pointData)) {
+      if (!p.uid) continue; // coordinate-only waypoints are not selectable
       v.set(p.x, p.y, p.z).project(camera);
       if (v.z > 1) continue; // behind camera
       const sx = (v.x * 0.5 + 0.5) * rect.width;
       const sy = (-v.y * 0.5 + 0.5) * rect.height;
       const d = Math.hypot(sx - px, sy - py);
-      if (d <= bestDist) { bestDist = d; best = p; }
+      if (d < bestDist) { bestDist = d; best = p; }
     }
     return best;
   }
@@ -222,7 +250,7 @@ function createViewport(container) {
   })();
 
   return {
-    setPoints, getCameraState, focusUid, highlight, resetView, resize,
+    setPoints, setRoute, getCameraState, focusUid, highlight, resetView, resize,
     setOnSelect(fn) { onSelect = fn || (() => {}); },
   };
 }

@@ -14,6 +14,7 @@ let sky = null; // the SkyMap instance
 let wired3D = false;
 let currentView = "3d"; // "3d" | "2d" — which viewport is shown
 let navState = null; // last known full backend NavigatorState (source of truth)
+let currentRoute = null; // the active route being edited (voyage planning)
 
 const $ = (id) => document.getElementById(id);
 const status = (msg) => { $("status").textContent = msg; };
@@ -111,6 +112,8 @@ async function selectObject(uid) {
     sky.setSelected(uid);
     if (window.UNAV3D) window.UNAV3D.highlight(uid);
     $("focus-btn").disabled = !hasCartesian(selectedObject);
+    $("bookmark-btn").disabled = false;
+    $("add-to-route-btn").disabled = currentRoute === null;
     status("selected " + uid);
   } catch (err) { status("inspect failed: " + err.message); }
 }
@@ -374,6 +377,220 @@ async function syncNavigatorToView() {
   } catch (err) { status("sync failed: " + err.message); }
 }
 
+// --- voyage planning: bookmarks ---
+
+async function loadBookmarks() {
+  try {
+    const list = await api("/bookmarks");
+    const el = $("bookmarks");
+    if (!list.length) { el.className = "list muted"; el.innerHTML = "<li>none yet</li>"; return; }
+    el.className = "list";
+    el.innerHTML = "";
+    for (const b of list) {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${escapeHtml(b.label)}</span>`;
+      const del = document.createElement("button");
+      del.className = "chip"; del.textContent = "×"; del.title = "delete bookmark";
+      del.addEventListener("click", () => deleteBookmark(b.bookmark_id));
+      if (b.object_uid) li.querySelector("span").addEventListener("click", () => selectObject(b.object_uid));
+      li.appendChild(del);
+      el.appendChild(li);
+    }
+  } catch (err) { status("bookmarks: " + err.message); }
+}
+
+async function bookmarkSelected() {
+  if (!selectedObject) return;
+  const body = { label: selectedObject.name || selectedObject.uid, object_uid: selectedObject.uid };
+  if (hasCartesian(selectedObject)) body.position = { x: selectedObject.x, y: selectedObject.y, z: selectedObject.z };
+  try {
+    await api("/bookmarks", { method: "POST", body: JSON.stringify(body) });
+    await loadBookmarks();
+    status("bookmarked " + body.label);
+  } catch (err) { status("bookmark failed: " + err.message); }
+}
+
+async function deleteBookmark(id) {
+  try { await api("/bookmarks/" + encodeURIComponent(id), { method: "DELETE" }); await loadBookmarks(); }
+  catch (err) { status("delete bookmark failed: " + err.message); }
+}
+
+// --- voyage planning: routes ---
+
+async function loadRoutes() {
+  try {
+    const list = await api("/routes");
+    const el = $("routes");
+    if (!list.length) { el.className = "list muted"; el.innerHTML = "<li>none yet</li>"; return; }
+    el.className = "list";
+    el.innerHTML = "";
+    for (const r of list) {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${escapeHtml(r.name)}</span><span class="tag">${r.waypoints.length} wp</span>`;
+      li.querySelector("span").addEventListener("click", () => selectRoute(r.route_id));
+      const del = document.createElement("button");
+      del.className = "chip"; del.textContent = "×"; del.title = "delete route";
+      del.addEventListener("click", (e) => { e.stopPropagation(); deleteRoute(r.route_id); });
+      li.appendChild(del);
+      el.appendChild(li);
+    }
+  } catch (err) { status("routes: " + err.message); }
+}
+
+async function newRoute() {
+  const name = $("route-name").value.trim() || "Route";
+  try {
+    currentRoute = await api("/routes", { method: "POST", body: JSON.stringify({ name }) });
+    $("route-name").value = "";
+    renderRoute();
+    await loadRoutes();
+    status("created route " + name);
+  } catch (err) { status("new route failed: " + err.message); }
+}
+
+async function selectRoute(id) {
+  try { currentRoute = await api("/routes/" + encodeURIComponent(id)); renderRoute(); }
+  catch (err) { status("load route failed: " + err.message); }
+}
+
+async function deleteRoute(id) {
+  try {
+    await api("/routes/" + encodeURIComponent(id), { method: "DELETE" });
+    if (currentRoute && currentRoute.route_id === id) { currentRoute = null; renderRoute(); }
+    await loadRoutes();
+  } catch (err) { status("delete route failed: " + err.message); }
+}
+
+async function addSelectedToRoute() {
+  if (!selectedObject || !currentRoute) return;
+  try {
+    currentRoute = await api(
+      `/routes/${encodeURIComponent(currentRoute.route_id)}/add-object/${encodeURIComponent(selectedObject.uid)}`,
+      { method: "POST" },
+    );
+    renderRoute();
+    await loadRoutes();
+    status(`added ${selectedObject.uid} to route`);
+  } catch (err) { status("add to route failed: " + err.message); }
+}
+
+async function saveActiveRoute() {
+  // Persist client-side edits (reorder/remove) to the active route.
+  currentRoute = await api(
+    "/routes/" + encodeURIComponent(currentRoute.route_id),
+    { method: "PUT", body: JSON.stringify(currentRoute) },
+  );
+}
+
+async function moveWaypoint(index, delta) {
+  const wps = currentRoute.waypoints;
+  const j = index + delta;
+  if (j < 0 || j >= wps.length) return;
+  [wps[index], wps[j]] = [wps[j], wps[index]];
+  try { await saveActiveRoute(); renderRoute(); await loadRoutes(); }
+  catch (err) { status("reorder failed: " + err.message); }
+}
+
+async function removeWaypoint(wid) {
+  currentRoute.waypoints = currentRoute.waypoints.filter((w) => w.wid !== wid);
+  try { await saveActiveRoute(); renderRoute(); await loadRoutes(); }
+  catch (err) { status("remove waypoint failed: " + err.message); }
+}
+
+function renderRoute() {
+  const el = $("route-waypoints");
+  $("add-to-route-btn").disabled = currentRoute === null || selectedObject === null;
+  $("create-mission-btn").disabled = !(currentRoute && currentRoute.waypoints.length);
+  if (!currentRoute) {
+    $("active-route-label").textContent = "no active route";
+    el.className = "list muted"; el.innerHTML = "<li>create or select a route</li>";
+    $("route-summary").textContent = "";
+    drawRouteInViewports();
+    return;
+  }
+  $("active-route-label").textContent = `active: ${currentRoute.name}`;
+  const wps = currentRoute.waypoints;
+  if (!wps.length) { el.className = "list muted"; el.innerHTML = "<li>no waypoints — add the selected object</li>"; }
+  else {
+    el.className = "list";
+    el.innerHTML = "";
+    wps.forEach((w, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${i + 1}. ${escapeHtml(w.label || w.object_uid || w.kind)}</span>`;
+      const ctrl = document.createElement("span"); ctrl.className = "wp-ctrl";
+      ctrl.innerHTML =
+        `<button class="chip" title="up">↑</button><button class="chip" title="down">↓</button>` +
+        `<button class="chip" title="remove">×</button>`;
+      const [up, down, rm] = ctrl.querySelectorAll("button");
+      up.addEventListener("click", () => moveWaypoint(i, -1));
+      down.addEventListener("click", () => moveWaypoint(i, 1));
+      rm.addEventListener("click", () => removeWaypoint(w.wid));
+      if (w.object_uid) li.querySelector("span").addEventListener("click", () => selectObject(w.object_uid));
+      li.appendChild(ctrl);
+      el.appendChild(li);
+    });
+  }
+  updateRouteSummary();
+  drawRouteInViewports();
+}
+
+async function updateRouteSummary() {
+  if (!currentRoute) { $("route-summary").textContent = ""; return; }
+  try {
+    const s = await api("/routes/" + encodeURIComponent(currentRoute.route_id) + "/summary");
+    $("route-summary").textContent =
+      `legs: ${s.leg_count} · positioned: ${s.positioned_waypoints} · total: ${round(s.total_distance_pc)} pc`;
+  } catch (_) { /* non-fatal */ }
+}
+
+function drawRouteInViewports() {
+  const wps = currentRoute ? currentRoute.waypoints : [];
+  if (window.UNAV3D && window.UNAV3D.setRoute) window.UNAV3D.setRoute(wps);
+  if (sky && sky.setRoute) sky.setRoute(wps);
+}
+
+// --- voyage planning: missions ---
+
+async function loadMissions() {
+  try {
+    const list = await api("/missions");
+    const el = $("missions");
+    if (!list.length) { el.className = "list muted"; el.innerHTML = "<li>none yet</li>"; return; }
+    el.className = "list";
+    el.innerHTML = "";
+    for (const m of list) {
+      const li = document.createElement("li");
+      const n = m.route ? m.route.waypoints.length : 0;
+      li.innerHTML = `<span>${escapeHtml(m.title)}</span><span class="tag">${n} wp</span>`;
+      if (m.route) li.querySelector("span").addEventListener("click", () => { currentRoute = m.route; renderRoute(); });
+      const del = document.createElement("button");
+      del.className = "chip"; del.textContent = "×"; del.title = "delete mission";
+      del.addEventListener("click", () => deleteMission(m.mission_id));
+      li.appendChild(del);
+      el.appendChild(li);
+    }
+  } catch (err) { status("missions: " + err.message); }
+}
+
+async function createMissionFromRoute() {
+  if (!currentRoute || !currentRoute.waypoints.length) return;
+  const title = $("mission-title").value.trim() || `${currentRoute.name} mission`;
+  const segments = currentRoute.waypoints.map((w, i) => ({
+    waypoint_id: w.wid, transition_seconds: i === 0 ? 0 : 10, hold_seconds: 0,
+  }));
+  try {
+    await api("/missions", { method: "POST", body: JSON.stringify({ title, route: currentRoute, segments }) });
+    $("mission-title").value = "";
+    await loadMissions();
+    status("created mission " + title);
+  } catch (err) { status("create mission failed: " + err.message); }
+}
+
+async function deleteMission(id) {
+  try { await api("/missions/" + encodeURIComponent(id), { method: "DELETE" }); await loadMissions(); }
+  catch (err) { status("delete mission failed: " + err.message); }
+}
+
 // --- helpers ---
 
 function num(id, dflt = 0) { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : dflt; }
@@ -403,6 +620,12 @@ function init() {
   $("load-region-btn").addEventListener("click", loadRegionInView);
   $("fit-btn").addEventListener("click", () => sky.fit());
 
+  // voyage planning: bookmarks, routes, missions
+  $("bookmark-btn").addEventListener("click", bookmarkSelected);
+  $("new-route-btn").addEventListener("click", newRoute);
+  $("add-to-route-btn").addEventListener("click", addSelectedToRoute);
+  $("create-mission-btn").addEventListener("click", createMissionFromRoute);
+
   // 2D / 3D view toggle.
   $("view-3d-btn").addEventListener("click", () => showView("3d"));
   $("view-2d-btn").addEventListener("click", () => showView("2d"));
@@ -418,6 +641,9 @@ function init() {
   loadDatasets();
   loadState();
   loadFullSky(); // populate the sky map on first load
+  loadBookmarks();
+  loadRoutes();
+  loadMissions();
 }
 
 document.addEventListener("DOMContentLoaded", init);

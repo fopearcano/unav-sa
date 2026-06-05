@@ -13,6 +13,20 @@ The cache is a bounded *working set*, not a full survey mirror.
 
 from unav_core.db.database import Database
 from unav_core.db.importer import ImportSummary, import_jsonl_to_db, import_objects
+from unav_core.db.planning import (
+    delete_bookmark,
+    delete_mission,
+    delete_route,
+    get_bookmark,
+    get_mission,
+    get_route,
+    list_bookmarks,
+    list_missions,
+    list_routes,
+    save_bookmark,
+    save_mission,
+    save_route,
+)
 from unav_core.db.queries import (
     brightest_objects,
     filter_by_source,
@@ -42,4 +56,16 @@ __all__ = [
     "highest_redshift_objects",
     "cone_search",
     "angular_separation_deg",
+    "save_bookmark",
+    "list_bookmarks",
+    "get_bookmark",
+    "delete_bookmark",
+    "save_route",
+    "list_routes",
+    "get_route",
+    "delete_route",
+    "save_mission",
+    "list_missions",
+    "get_mission",
+    "delete_mission",
 ]

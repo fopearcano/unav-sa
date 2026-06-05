@@ -77,6 +77,31 @@ provenance_table = Table(
     Column("provenance_json", Text, nullable=False),
 )
 
+# --- voyage planning (bookmarks / routes / missions), persisted as JSON blobs ---
+bookmarks_table = Table(
+    "bookmarks",
+    metadata_obj,
+    Column("bookmark_id", String, primary_key=True),
+    Column("created_at", String, nullable=False),
+    Column("data_json", Text, nullable=False),
+)
+
+routes_table = Table(
+    "routes",
+    metadata_obj,
+    Column("route_id", String, primary_key=True),
+    Column("created_at", String, nullable=False),
+    Column("data_json", Text, nullable=False),
+)
+
+missions_table = Table(
+    "missions",
+    metadata_obj,
+    Column("mission_id", String, primary_key=True),
+    Column("created_at", String, nullable=False),
+    Column("data_json", Text, nullable=False),
+)
+
 # --- Indexes (task §4) ---
 Index("ix_objects_source", objects_table.c.source)
 Index("ix_objects_object_type", objects_table.c.object_type)

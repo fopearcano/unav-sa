@@ -93,6 +93,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .list li:hover { background: var(--panel-2); }
 .list li.active { border-color: var(--accent); background: var(--panel-2); }
 .list .tag { color: var(--muted); font-size: 12px; }
+.list li > span:first-child { cursor: pointer; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list li .chip { padding: 2px 7px; font-size: 12px; line-height: 1.1; }
+.wp-ctrl { display: inline-flex; gap: 3px; flex: none; }
+.subhead { margin-top: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+#route-summary { margin-top: 6px; }
 
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; }
 .kv .k { color: var(--muted); }
