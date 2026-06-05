@@ -18,13 +18,13 @@ scientific dependencies into Cinema 4D's Python runtime.
 ```
 adapters/cinema4d/
   README.md      this file
-  docs/          the plan, MVP scope, protocol and ownership rules
-  plugin/        (placeholder) the C4D-side plugin — c4d SDK + stdlib only
-  client/        (placeholder) the stdlib HTTP/JSON client to the UNAV server
+  docs/          the plan, MVP scope, protocol, ownership rules, install + limits
+  plugin/        the adapter SKELETON — c4d SDK + stdlib only (see plugin/README.md)
+  client/        (placeholder) reserved; the stdlib client currently lives in plugin/
 ```
 
-`plugin/` and `client/` are **placeholders** (a README each) — no implementation
-yet; they fix where code will go.
+The `plugin/` folder now holds a thin **skeleton** (connect, list missions, build
+a camera rig, bake a basic timeline); `client/` remains a reserved placeholder.
 
 ## Documents
 
@@ -33,11 +33,13 @@ yet; they fix where code will go.
 | [`docs/C4D_ADAPTER_MVP.md`](docs/C4D_ADAPTER_MVP.md) | **The MVP**: scope, the can/must-not, the API slice, and the first workflow (connect → mission → camera rig → bake timeline). |
 | [`docs/C4D_LOCAL_API_PROTOCOL.md`](docs/C4D_LOCAL_API_PROTOCOL.md) | The MVP wire protocol (camera + mission), endpoint by endpoint, incl. the camera-path derivation. |
 | [`docs/C4D_DATA_OWNERSHIP_RULES.md`](docs/C4D_DATA_OWNERSHIP_RULES.md) | The boundary contract: who owns what; the hard must-not rules. |
+| [`docs/INSTALL_C4D_ADAPTER.md`](docs/INSTALL_C4D_ADAPTER.md) | Install the plugin in Cinema 4D, use it, and the manual test checklist. |
+| [`docs/C4D_ADAPTER_LIMITATIONS.md`](docs/C4D_ADAPTER_LIMITATIONS.md) | What the skeleton does and does **not** do yet. |
 | [`docs/C4D_ADAPTER_PLAN.md`](docs/C4D_ADAPTER_PLAN.md) | The fuller design: responsibilities, runtime constraints, coordinate/units mapping, phasing. |
 | [`docs/C4D_API_CLIENT_PROTOCOL.md`](docs/C4D_API_CLIENT_PROTOCOL.md) | The full client protocol (render payload, file fallback, future WebSocket). |
 | [`docs/C4D_WORKFLOW.md`](docs/C4D_WORKFLOW.md) | The end-to-end artist workflow inside Cinema 4D. |
 
-New here? Start with **C4D_ADAPTER_MVP.md**.
+New here? Start with **C4D_ADAPTER_MVP.md**, then **INSTALL_C4D_ADAPTER.md**.
 
 ## In one sentence (the MVP)
 
