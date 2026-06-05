@@ -17,6 +17,23 @@ def test_minimal_catalog_object() -> None:
     assert obj.has_position is False
 
 
+def test_native_id_optional_and_global_uid() -> None:
+    # native_id defaults to None; uid is the globally unique (source-prefixed) id.
+    bare = CatalogObject(uid="gaia:123", source="Gaia DR3", object_type=ObjectType.STAR)
+    assert bare.native_id is None
+
+    obj = CatalogObject(
+        uid="gaia:5853498713160606720",
+        native_id="5853498713160606720",
+        source="Gaia DR3",
+        object_type=ObjectType.STAR,
+    )
+    assert obj.native_id == "5853498713160606720"
+    dumped = obj.model_dump(mode="json")
+    assert dumped["uid"] == "gaia:5853498713160606720"
+    assert dumped["native_id"] == "5853498713160606720"
+
+
 def test_object_type_coerce() -> None:
     assert ObjectType.coerce("GALAXY") is ObjectType.GALAXY
     assert ObjectType.coerce(" quasar ") is ObjectType.QUASAR

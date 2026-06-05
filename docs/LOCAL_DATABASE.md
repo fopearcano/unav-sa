@@ -20,7 +20,7 @@ queries. Implemented in `unav_core.db` with **SQLAlchemy 2.x Core over SQLite**.
 
 ### `objects` (one row per catalog object)
 
-`uid` (PK), `source`, `object_type`, `name`, `ra_deg`, `dec_deg`,
+`uid` (PK), `source`, `object_type`, `name`, `native_id`, `ra_deg`, `dec_deg`,
 `distance_pc`, `parallax_mas`, `redshift`, `radial_velocity_kms`,
 `proper_motion_ra_masyr`, `proper_motion_dec_masyr`, `apparent_magnitude`,
 `absolute_magnitude`, `color_index`, `spectral_type`, `x`, `y`, `z`,

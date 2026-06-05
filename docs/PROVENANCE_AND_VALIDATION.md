@@ -61,10 +61,17 @@ lose real measurements, so UNAV-SA keeps and flags them.
 | `detect_invalid_parallax(obj)` | `invalid_parallax` | WARNING | `parallax_mas <= 0`. |
 | `detect_invalid_redshift(obj)` | `invalid_redshift` | ERROR | `redshift <= -1` (1 + z must be > 0). |
 | `detect_malformed_metadata(obj)` | `malformed_metadata` | ERROR | Non-dict, non-string keys, or not JSON-serialisable (incl. `NaN`/`inf`). |
-| `detect_duplicate_uids(objects)` | `duplicate_uid` | ERROR | A `uid` appears more than once. |
+| `detect_duplicate_uids(objects)` | `duplicate_uid` | ERROR | A `uid` appears more than once (see below). |
 
 Each per-object detector returns `ValidationIssue | None`;
 `detect_duplicate_uids` returns a `list[ValidationIssue]`.
+
+**`uid` is global, so duplicate detection is global.** A `uid` is the
+[globally unique UNAV id](CORE_DATA_SCHEMA.md#identity-uid--native_id), not a
+per-source id — so two records sharing a `uid` are a collision **even across
+different sources/datasets**, and are flagged as an ERROR. Source-native ids
+(which are only unique *within* a catalog) belong in `native_id` or `metadata`,
+never in `uid` alone; this is what keeps merged datasets collision-free.
 
 ### Aggregation
 

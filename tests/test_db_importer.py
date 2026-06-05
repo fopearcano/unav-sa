@@ -116,6 +116,7 @@ def test_full_fields_and_provenance_roundtrip() -> None:
     db = Database(":memory:")
     obj = CatalogObject(
         uid="gaia:1",
+        native_id="1",
         source="Gaia DR3",
         object_type=ObjectType.STAR,
         ra_deg=10.0,
@@ -131,6 +132,7 @@ def test_full_fields_and_provenance_roundtrip() -> None:
     )
     import_objects(db, [obj], dataset_name="g")
     fetched = db.fetch_objects()[0]
+    assert fetched.native_id == "1"  # persisted + rehydrated
     assert fetched.color_index == 0.7
     assert fetched.proper_motion_ra_masyr == 1.0
     assert fetched.proper_motion_dec_masyr == -2.0

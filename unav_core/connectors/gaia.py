@@ -124,6 +124,7 @@ def _normalize_gaia_row(row: dict[str, Any], provenance: Provenance) -> CatalogO
     try:
         return CatalogObject(
             uid=f"gaia:{gaia_id}",
+            native_id=str(gaia_id),
             source="Gaia DR3",
             object_type=ObjectType.STAR,
             name=f"Gaia DR3 {gaia_id}",

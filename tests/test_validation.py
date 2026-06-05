@@ -77,6 +77,19 @@ def test_duplicate_uid_detection() -> None:
     assert issues[0].severity == Severity.ERROR
 
 
+def test_duplicate_uid_detection_is_global_across_sources() -> None:
+    # uid is the globally unique UNAV id: the same uid from different sources is a
+    # collision (this is why source-native ids belong in native_id, not uid).
+    objs = [
+        _obj(uid="x:1", source="gaia", ra_deg=1.0, dec_deg=2.0),
+        _obj(uid="x:1", source="sdss", ra_deg=3.0, dec_deg=4.0),
+    ]
+    issues = detect_duplicate_uids(objs)
+    assert len(issues) == 1
+    assert issues[0].uid == "x:1"
+    assert issues[0].code == "duplicate_uid"
+
+
 def test_validate_object_aggregates_issues() -> None:
     report = validate_object(_obj(parallax_mas=-1.0))  # missing coords + bad parallax
     codes = {issue.code for issue in report.issues}

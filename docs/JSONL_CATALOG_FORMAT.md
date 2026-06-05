@@ -35,6 +35,12 @@ Each line is independent: galaxies carry a redshift and no distance; stars carry
 distance/parallax. Optional fields that are unset are still present as `null`
 (pydantic emits all declared fields).
 
+Every line's `uid` is the
+[globally unique UNAV id](CORE_DATA_SCHEMA.md#identity-uid--native_id) — normally
+source-prefixed (e.g. `gaia:5853498713160606720`) — with the source-native id in
+`native_id`. A catalog must not contain duplicate `uid`s (`validate_jsonl` reports
+them as errors), even when it merges records from several sources.
+
 ## API (`unav_core.data.io`)
 
 | Function | Behaviour |

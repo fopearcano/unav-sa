@@ -67,7 +67,8 @@ def test_fetch_normalizes(monkeypatch) -> None:
     objects = gaia.fetch_gaia_region(45.0, 0.0, 0.1, limit=5)
     assert len(objects) == 2
     first = objects[0]
-    assert first.uid == "gaia:4295806720"
+    assert first.uid == "gaia:4295806720"  # globally unique, source-prefixed
+    assert first.native_id == "4295806720"  # source-native id
     assert first.source == "Gaia DR3"
     assert first.object_type is ObjectType.STAR
     assert (first.ra_deg, first.dec_deg) == (45.0, 0.1)

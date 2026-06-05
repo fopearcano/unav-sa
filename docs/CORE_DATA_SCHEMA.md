@@ -39,10 +39,11 @@ is optional. Source-specific extras go in `metadata`; origin info in
 
 | Field | Type | Unit | Notes |
 | --- | --- | --- | --- |
-| `uid` | str | — | Unique id within its source (non-empty). |
+| `uid` | str | — | **Globally unique** UNAV id (non-empty); normally source-prefixed — see [Identity](#identity-uid--native_id). |
 | `source` | str | — | Originating catalog/service (non-empty). |
 | `object_type` | `ObjectType` | — | Canonical type. |
 | `name` | str? | — | Human-readable designation. |
+| `native_id` | str? | — | Source-native catalog id (the un-prefixed id), if any. |
 | `ra_deg` | float? | deg | Right ascension, `[0, 360)`. |
 | `dec_deg` | float? | deg | Declination, `[-90, 90]`. |
 | `distance_pc` | float? | pc | Distance, `>= 0`. |
@@ -58,6 +59,47 @@ is optional. Source-specific extras go in `metadata`; origin info in
 | `x`, `y`, `z` | float? | pc | Cartesian position. |
 | `metadata` | dict | — | Source-specific extras (default `{}`). |
 | `provenance` | `Provenance`? | — | Origin/audit record. |
+
+### Identity (`uid` / `native_id`)
+
+`uid` is the **globally unique UNAV object id** — unique across *all* sources and
+datasets, not just within one catalog. It is the stable handle everything else
+references: routes/missions/bookmarks store a `uid`, the database keys on it,
+duplicate detection is global, and merging two datasets must not collide.
+
+To keep ids globally unique and self-describing, a `uid` is **normally
+source-prefixed** (`<source>:<native-id>`):
+
+| Source | Example `uid` |
+| --- | --- |
+| Gaia | `gaia:5853498713160606720` |
+| SDSS | `sdss:1237654607730835537` |
+| DESI | `desi:targetid-39627640566321887` |
+| JPL Horizons (epoch object) | `jpl:mars:2026-01-01T00:00:00` |
+| Custom / user object | `custom:station-alpha` |
+
+The **un-prefixed**, source-native id goes in `native_id` (and/or `metadata`),
+*not* in `uid`:
+
+```python
+CatalogObject(
+    uid="gaia:5853498713160606720",   # globally unique UNAV id
+    native_id="5853498713160606720",  # source-native catalog id
+    source="Gaia DR3",
+    object_type=ObjectType.STAR,
+)
+```
+
+Rules of thumb:
+
+- **A `uid` must be globally unique and stable.** The same physical object fetched
+  twice must get the same `uid`; two different objects must never share one.
+- **Source-specific ids belong in `native_id` or `metadata`**, never in `uid`
+  alone (a bare native id like `123456789` is not globally unique — Gaia and SDSS
+  could both use it).
+- The prefix convention is a *strong recommendation*, not a structural constraint:
+  the model only enforces non-empty. Connectors are responsible for minting
+  prefixed, globally unique ids.
 
 ### Structural validation (enforced by the model)
 
@@ -111,8 +153,9 @@ One JSON object per line, UTF-8; datetimes as ISO-8601; `NaN`/`inf` rejected.
 ```python
 from unav_core.data import CatalogObject, ObjectType, read_jsonl, write_jsonl
 
-objs = [CatalogObject(uid="gaia-1", source="Gaia DR3",
-                      object_type=ObjectType.STAR, ra_deg=279.23, dec_deg=38.78)]
+objs = [CatalogObject(uid="gaia:5853498713160606720", native_id="5853498713160606720",
+                      source="Gaia DR3", object_type=ObjectType.STAR,
+                      ra_deg=279.23, dec_deg=38.78)]
 write_jsonl(objs, "stars.jsonl")     # -> number written
 restored = read_jsonl("stars.jsonl") # -> list[CatalogObject]
 ```
@@ -126,5 +169,5 @@ restored = read_jsonl("stars.jsonl") # -> list[CatalogObject]
 Example line:
 
 ```json
-{"uid": "gaia-1", "source": "Gaia DR3", "object_type": "star", "name": "Vega", "ra_deg": 279.23, "dec_deg": 38.78, "parallax_mas": 130.23, "metadata": {}, "provenance": null}
+{"uid": "gaia:5853498713160606720", "source": "Gaia DR3", "object_type": "star", "name": "Vega", "native_id": "5853498713160606720", "ra_deg": 279.23, "dec_deg": 38.78, "parallax_mas": 130.23, "metadata": {}, "provenance": null}
 ```

@@ -50,10 +50,16 @@ class CatalogObject(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     # --- identity ---
-    uid: str = Field(min_length=1, description="Unique id within its source.")
+    uid: str = Field(
+        min_length=1,
+        description="Globally unique UNAV id (normally source-prefixed, e.g. 'gaia:123456789').",
+    )
     source: str = Field(min_length=1, description="Originating catalog/service.")
     object_type: ObjectType = Field(description="Canonical object type.")
     name: str | None = Field(default=None, description="Human-readable name/designation.")
+    native_id: str | None = Field(
+        default=None, description="Source-native catalog id (the un-prefixed id), if any."
+    )
 
     # --- sky position (ICRS, degrees) ---
     ra_deg: float | None = Field(default=None, ge=0.0, lt=360.0, description="RA [0,360) deg.")
