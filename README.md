@@ -45,6 +45,7 @@ voyage planning (bookmarks / routes / missions).
 | --- | --- |
 | `python scripts/setup_dev.py` | create data dirs, generate sample data, print a health check + next steps (`--install` also pip-installs the extras) |
 | `python scripts/run_demo.py` | generate + import sample data, then start the server + UI |
+| `python scripts/create_sample_db.py` | generate the sample catalog (if missing), create a SQLite DB, import it, print a summary — fully offline |
 | `python scripts/run_server.py` | start the server + UI on the configured database |
 | `python scripts/run_tests.py` | run the test suite (`--lint` also runs ruff); args forward to pytest |
 | `python scripts/healthcheck.py` | report Python/dependency versions, config paths, sample/DB status (`--server` probes the server) |
