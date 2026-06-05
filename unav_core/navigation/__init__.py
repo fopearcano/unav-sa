@@ -21,6 +21,7 @@ stack. ``visible_objects`` needs the local cache, so it is imported lazily.
 
 from typing import TYPE_CHECKING
 
+from unav_core.navigation.bookmarks import Bookmark, BookmarkCollection
 from unav_core.navigation.camera import Camera
 from unav_core.navigation.events import (
     DatasetChangedEvent,
@@ -42,6 +43,8 @@ __all__ = [
     "Vec3",
     "Camera",
     "NavigatorState",
+    "Bookmark",
+    "BookmarkCollection",
     "visible_objects",
     "EventBus",
     "NavigationEvent",
