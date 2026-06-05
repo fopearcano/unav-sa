@@ -33,7 +33,9 @@ def enrich_object_coordinates(
     * The distance is ``distance_pc`` when present. When it is absent and
       ``derive_distance_from_parallax`` is true, a **positive** parallax is
       inverted to a distance (``d[pc] = 1000 / parallax[mas]``) and stored on the
-      returned object. Non-positive parallaxes are never inverted (they cannot
+      returned object, with ``metadata["distance_from_parallax"] = True`` recording
+      that this distance is **approximate** (the parallax inversion ignores
+      measurement error). Non-positive parallaxes are never inverted (they cannot
       yield a distance — see ``docs/PROVENANCE_AND_VALIDATION.md``).
     * If there is nothing to compute, the object is returned unchanged.
 
@@ -44,12 +46,14 @@ def enrich_object_coordinates(
     if obj.ra_deg is None or obj.dec_deg is None:
         return obj
 
-    updates: dict[str, float] = {}
+    updates: dict[str, object] = {}
     distance_pc = obj.distance_pc
     if distance_pc is None and derive_distance_from_parallax:
         if obj.parallax_mas is not None and obj.parallax_mas > 0.0:
             distance_pc = 1000.0 / obj.parallax_mas
             updates["distance_pc"] = distance_pc
+            # Flag the parallax-derived (approximate) distance for downstream honesty.
+            updates["metadata"] = {**obj.metadata, "distance_from_parallax": True}
     if distance_pc is None:
         return obj
 

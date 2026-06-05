@@ -5,8 +5,9 @@ built on **Astropy** so the maths is correct rather than hand-rolled. It is part
 of the DCC-independent core and depends on nothing in `unav_app`, `unav_server`
 or `adapters`.
 
-> Phase 2 scope. See [`COORDINATE_CONVENTIONS.md`](COORDINATE_CONVENTIONS.md) and
-> [`TIME_AND_EPOCHS.md`](TIME_AND_EPOCHS.md) for conventions.
+> Phase 2 scope. See [`COORDINATE_CONVENTIONS.md`](COORDINATE_CONVENTIONS.md),
+> [`TIME_AND_EPOCHS.md`](TIME_AND_EPOCHS.md) and [`UNITS.md`](UNITS.md) for the
+> conventions.
 
 ## Dependency policy
 
@@ -29,7 +30,7 @@ or `adapters`.
 | `unav_core.astro.units` | `pc_to_ly`, `ly_to_pc`, `au_to_pc`, `pc_to_au`, `km_to_au`, `au_to_km`. |
 | `unav_core.astro.time` | `parse_time`, `iso_to_julian_date`, `julian_date_to_iso`, `current_time_utc`, `normalize_epoch`. |
 | `unav_core.astro.frames` | Frame registry: `SUPPORTED_FRAMES`, `DEFAULT_FRAME`, `normalize_frame_name`, `get_frame`. |
-| `unav_core.astro.coordinates` | `skycoord_from_radec`, `radec_distance_to_cartesian`, `cartesian_to_radec_distance`, `icrs_to_galactic`, `galactic_to_icrs`, `angular_separation`. |
+| `unav_core.astro.coordinates` | `skycoord_from_radec`, `radec_distance_to_cartesian`, `cartesian_to_radec_distance`, `icrs_to_galactic`, `galactic_to_icrs`, `angular_separation` (alias `angular_separation_deg`). |
 | `unav_core.astro.enrich` | `enrich_object_coordinates` — fills a `CatalogObject`'s `x/y/z`. |
 
 Submodules are imported directly, e.g.
@@ -46,7 +47,8 @@ a new `CatalogObject` and never mutates the input.
 - Has `ra_deg` + `dec_deg` and a distance → computes ICRS Cartesian `x/y/z` (pc).
 - Distance source: `distance_pc` if present; otherwise, when enabled, a
   **positive** `parallax_mas` is inverted (`d[pc] = 1000 / parallax[mas]`) and
-  stored. Non-positive parallaxes are never inverted.
+  stored, with `metadata["distance_from_parallax"] = True` flagging the distance
+  as **approximate**. Non-positive parallaxes are never inverted.
 - Nothing to compute → returned unchanged (Astropy is not even imported).
 
 ```python

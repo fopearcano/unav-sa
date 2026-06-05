@@ -86,3 +86,7 @@ def angular_separation(ra1: float, dec1: float, ra2: float, dec2: float) -> floa
     second = skycoord_from_radec(ra2, dec2)
     u = get_units()
     return float(first.separation(second).to_value(u.deg))
+
+
+#: Explicit ``_deg`` alias (the result is in degrees); same function, both names work.
+angular_separation_deg = angular_separation

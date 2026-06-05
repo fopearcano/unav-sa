@@ -65,6 +65,8 @@ def test_galactic_icrs_roundtrip() -> None:
 )
 def test_angular_separation(a: tuple[float, float], b: tuple[float, float], sep: float) -> None:
     assert C.angular_separation(a[0], a[1], b[0], b[1]) == pytest.approx(sep, abs=1e-6)
+    # The explicit _deg alias is the same function and returns degrees.
+    assert C.angular_separation_deg(a[0], a[1], b[0], b[1]) == pytest.approx(sep, abs=1e-6)
 
 
 # --- frames registry ---
