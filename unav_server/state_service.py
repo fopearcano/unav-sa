@@ -31,6 +31,16 @@ from unav_core.routes import Route
 
 _DEFAULT_SEARCH_LIMIT = 50
 
+#: Camera-relative move directions -> (Camera method, sign).
+_MOVES: dict[str, tuple[str, float]] = {
+    "forward": ("move_forward", 1.0),
+    "back": ("move_forward", -1.0),
+    "right": ("move_right", 1.0),
+    "left": ("move_right", -1.0),
+    "up": ("move_up", 1.0),
+    "down": ("move_up", -1.0),
+}
+
 
 class StateService:
     """Runtime state and core orchestration for the local API server."""
@@ -103,6 +113,23 @@ class StateService:
             raise ValueError(f"object {uid!r} has no Cartesian position to focus on")
         camera = self.state.to_camera()
         camera.focus_object(obj, distance=distance)
+        params = self.state.model_dump(exclude={"position", "direction", "up"})
+        self.state = NavigatorState.from_camera(camera, **params)
+        return self.state
+
+    def move(self, direction: str, distance: float) -> NavigatorState:
+        """Step the navigator ``distance`` pc in a camera-relative ``direction``.
+
+        Orientation and the viewing parameters (fov/clip/cone/cap/epoch) are
+        preserved; only the position moves. The new state is persisted.
+        """
+        spec = _MOVES.get(direction)
+        if spec is None:
+            valid = ", ".join(_MOVES)
+            raise ValueError(f"unknown direction {direction!r}; expected one of {valid}")
+        method, sign = spec
+        camera = self.state.to_camera()
+        getattr(camera, method)(sign * distance)
         params = self.state.model_dump(exclude={"position", "direction", "up"})
         self.state = NavigatorState.from_camera(camera, **params)
         return self.state

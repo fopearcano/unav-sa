@@ -13,6 +13,7 @@ let selectedObject = null;
 let sky = null; // the SkyMap instance
 let wired3D = false;
 let currentView = "3d"; // "3d" | "2d" — which viewport is shown
+let navState = null; // last known full backend NavigatorState (source of truth)
 
 const $ = (id) => document.getElementById(id);
 const status = (msg) => { $("status").textContent = msg; };
@@ -135,29 +136,49 @@ async function focusSelected() {
     const state = await api(`/navigator/focus/${encodeURIComponent(selectedObject.uid)}`, { method: "POST" });
     applyStateToForm(state);
     if (window.UNAV3D) window.UNAV3D.focusUid(selectedObject.uid);
-    status("focused on " + selectedObject.uid);
+    status(`focused on ${selectedObject.uid} — click “Query visible sector” to refresh`);
   } catch (err) { status("focus failed: " + err.message); }
 }
 
 // --- navigator state ---
 
+// The form edits the commonly-tweaked fields; the rest of the state (e.g. `up`,
+// active datasets) is preserved from the last known backend state (navState).
 function readStateFromForm() {
+  const base = navState || {};
   return {
     position: { x: num("pos-x"), y: num("pos-y"), z: num("pos-z") },
     direction: { x: num("dir-x"), y: num("dir-y"), z: num("dir-z") },
-    up: { x: 0, y: 1, z: 0 },
-    far_distance: num("far"),
-    cone_angle_degrees: num("cone"),
-    max_visible_objects: Math.max(1, Math.round(num("maxv"))),
+    up: base.up || { x: 0, y: 1, z: 0 },
+    fov_degrees: num("fov", 60),
+    near_distance: num("near", 0),
+    far_distance: num("far", 1000),
+    cone_angle_degrees: num("cone", 45),
+    epoch: strOrNull("epoch"),
+    max_visible_objects: Math.max(1, Math.round(num("maxv", 1000))),
+    active_dataset_ids: base.active_dataset_ids || [],
   };
 }
 
 function applyStateToForm(state) {
+  navState = state; // remember the full backend state (incl. up, datasets)
   $("pos-x").value = state.position.x; $("pos-y").value = state.position.y; $("pos-z").value = state.position.z;
   $("dir-x").value = state.direction.x; $("dir-y").value = state.direction.y; $("dir-z").value = state.direction.z;
+  $("near").value = state.near_distance;
   $("far").value = state.far_distance;
+  $("fov").value = state.fov_degrees;
   $("cone").value = state.cone_angle_degrees;
   $("maxv").value = state.max_visible_objects;
+  $("epoch").value = state.epoch || "";
+  renderStateReadout(state);
+}
+
+function renderStateReadout(s) {
+  const v = (p) => `${round(p.x)}, ${round(p.y)}, ${round(p.z)}`;
+  $("state-readout").textContent =
+    `pos [${v(s.position)}] · dir [${v(s.direction)}] · up [${v(s.up)}] · ` +
+    `fov ${s.fov_degrees}° · near ${s.near_distance} · far ${s.far_distance} pc · ` +
+    `cone ${s.cone_angle_degrees}° · epoch ${s.epoch || "—"} · max ${s.max_visible_objects}`;
 }
 
 async function loadState() {
@@ -173,15 +194,45 @@ async function setState() {
   } catch (err) { status("set state failed: " + err.message); }
 }
 
-// One action drives both viewports: query the visible sector (lightweight render
-// objects), then update the 3D points, the results list, the 2D sky, the object
-// count and the cap warning.
+// Camera-relative movement — persists the new state; does NOT auto-refresh the
+// visible sector (manual refresh keeps the query loop under user control).
+async function moveNavigator(direction) {
+  const distance = Math.abs(num("step", 10)) || 10;
+  try {
+    const state = await api("/navigator/move", {
+      method: "POST",
+      body: JSON.stringify({ direction, distance }),
+    });
+    applyStateToForm(state);
+    status(`moved ${direction} ${distance} pc — click “Query visible sector” to refresh`);
+  } catch (err) { status("move failed: " + err.message); }
+}
+
+async function resetNavigator() {
+  const def = {
+    position: { x: 0, y: 0, z: 0 }, direction: { x: 0, y: 0, z: -1 }, up: { x: 0, y: 1, z: 0 },
+    fov_degrees: 60, near_distance: 0, far_distance: 1000, cone_angle_degrees: 45,
+    epoch: null, max_visible_objects: 1000, active_dataset_ids: [],
+  };
+  try {
+    const state = await api("/navigator/state", { method: "POST", body: JSON.stringify(def) });
+    applyStateToForm(state);
+    if (window.UNAV3D) window.UNAV3D.resetView();
+    status("navigator reset — click “Query visible sector” to refresh");
+  } catch (err) { status("reset failed: " + err.message); }
+}
+
+// The manual refresh of the state loop: persist the form so the backend state is
+// authoritative, then query the visible sector FROM that current state. Updates
+// the 3D points, the results list, the 2D sky, the object count and cap warning.
 async function queryVisibleSector() {
   try {
-    const body = await api("/visible-sector/query", {
+    const state = await api("/navigator/state", {
       method: "POST",
-      body: JSON.stringify({ state: readStateFromForm(), sort: "distance" }),
+      body: JSON.stringify(readStateFromForm()),
     });
+    applyStateToForm(state);
+    const body = await api("/visible-sector/query-current", { method: "POST" });
     if (window.UNAV3D) {
       window.UNAV3D.setPoints(body.objects);
       if (selectedObject) window.UNAV3D.highlight(selectedObject.uid);
@@ -281,9 +332,9 @@ function wire3D() {
   $("render3d-btn").addEventListener("click", queryVisibleSector);
   $("sync3d-btn").addEventListener("click", syncNavigatorToView);
   $("reset3d-btn").addEventListener("click", () => window.UNAV3D.resetView());
+  // No auto-query on load — the user refreshes the sector manually.
   $("viewport3d-note").textContent =
-    "drag to orbit · right-drag to pan · wheel to zoom · click a point";
-  queryVisibleSector(); // populate the 3D view on load
+    "drag orbit · right-drag pan · wheel zoom · click a point — “Query visible sector” to load";
 }
 
 async function syncNavigatorToView() {
@@ -296,13 +347,14 @@ async function syncNavigatorToView() {
   try {
     const updated = await api("/navigator/state", { method: "POST", body: JSON.stringify(state) });
     applyStateToForm(updated);
-    status("navigator synced to 3D view");
+    status("navigator synced to 3D view — click “Query visible sector” to refresh");
   } catch (err) { status("sync failed: " + err.message); }
 }
 
 // --- helpers ---
 
-function num(id) { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : 0; }
+function num(id, dflt = 0) { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : dflt; }
+function strOrNull(id) { const v = $(id).value.trim(); return v === "" ? null : v; }
 function hasCartesian(o) { return o.x !== null && o.y !== null && o.z !== null; }
 function fmtPair(a, b) { return a === null || b === null ? "" : `${round(a)}, ${round(b)}`; }
 function fmtTriple(a, b, c) { return a === null || b === null || c === null ? "" : `${round(a)}, ${round(b)}, ${round(c)}`; }
@@ -319,7 +371,11 @@ function init() {
   $("search-form").addEventListener("submit", doSearch);
   $("focus-btn").addEventListener("click", focusSelected);
   $("set-state-btn").addEventListener("click", setState);
+  $("reset-nav-btn").addEventListener("click", resetNavigator);
   $("visible-btn").addEventListener("click", queryVisibleSector);
+  for (const dir of ["forward", "back", "left", "right", "up", "down"]) {
+    $(`move-${dir}`).addEventListener("click", () => moveNavigator(dir));
+  }
   $("full-sky-btn").addEventListener("click", loadFullSky);
   $("load-region-btn").addEventListener("click", loadRegionInView);
   $("fit-btn").addEventListener("click", () => sky.fit());

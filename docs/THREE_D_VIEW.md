@@ -6,7 +6,8 @@ click-to-select. It is a **navigator aid**, not a render engine.
 
 > Frontend: `unav_app/static/viewport3d.js` (Three.js) wired by
 > `unav_app/static/app.js`. Backend: the lightweight render payload from
-> `POST /visible-sector/query` (see [`RENDER_PAYLOAD.md`](RENDER_PAYLOAD.md)).
+> `POST /visible-sector/query-current` (see [`RENDER_PAYLOAD.md`](RENDER_PAYLOAD.md)
+> and [`NAVIGATOR_STATE_LOOP.md`](NAVIGATOR_STATE_LOOP.md)).
 > Builds on the Phase-12 foundation in
 > [`3D_NAVIGATOR_FOUNDATION.md`](3D_NAVIGATOR_FOUNDATION.md).
 
@@ -29,7 +30,7 @@ the rest of the app (2D sky, search, inspect) keeps working.
 
 | Action | How |
 | --- | --- |
-| **See the visible sector in 3D** | **Query visible sector** (or the 3D panel's **Render visible sector**) → `POST /visible-sector/query` → points appear. |
+| **See the visible sector in 3D** | **Query visible sector** (or the 3D panel's **Render visible sector**) → persists the form, then `POST /visible-sector/query-current` → points appear. |
 | **Orbit** | drag |
 | **Pan** | right-drag, or shift-drag |
 | **Zoom** | mouse wheel |

@@ -117,6 +117,12 @@ canvas#sky {
 .view { margin-top: 4px; }
 .warn { color: var(--warn); font-size: 12px; }
 
+/* navigator movement controls */
+.movebar { gap: 6px; margin-top: 4px; }
+.movebar .step { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; }
+.movebar .step input { width: 64px; padding: 4px 6px; }
+.statereadout { margin-top: 8px; line-height: 1.5; word-break: break-word; }
+
 /* viewport header: title + 2D/3D toggle on one row */
 .viewhead { justify-content: space-between; margin-bottom: 6px; }
 h2.inline { margin: 0; }

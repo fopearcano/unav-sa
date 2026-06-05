@@ -57,15 +57,31 @@
             <label>dir x <input id="dir-x" type="number" step="any" value="0" /></label>
             <label>dir y <input id="dir-y" type="number" step="any" value="0" /></label>
             <label>dir z <input id="dir-z" type="number" step="any" value="-1" /></label>
+            <label>near (pc) <input id="near" type="number" step="any" value="0" /></label>
             <label>far (pc) <input id="far" type="number" step="any" value="1000" /></label>
+            <label>fov (deg) <input id="fov" type="number" step="any" value="60" /></label>
             <label>cone (deg) <input id="cone" type="number" step="any" value="45" /></label>
             <label>max <input id="maxv" type="number" step="1" value="1000" /></label>
+            <label>epoch <input id="epoch" type="text" placeholder="J2016.0" /></label>
           </div>
+
+          <div class="row toolbar movebar">
+            <span class="step">step <input id="step" type="number" step="any" value="10" /> pc</span>
+            <button id="move-forward" class="chip" type="button">forward</button>
+            <button id="move-back" class="chip" type="button">back</button>
+            <button id="move-left" class="chip" type="button">left</button>
+            <button id="move-right" class="chip" type="button">right</button>
+            <button id="move-up" class="chip" type="button">up</button>
+            <button id="move-down" class="chip" type="button">down</button>
+          </div>
+
           <div class="row">
-            <button id="set-state-btn">Set state</button>
+            <button id="set-state-btn" class="chip">Set state</button>
+            <button id="reset-nav-btn" class="chip">Reset navigator</button>
             <button id="visible-btn" class="primary">Query visible sector</button>
           </div>
           <div id="visible-summary" class="muted">visible: —</div>
+          <div id="state-readout" class="muted statereadout">state: —</div>
         </div>
 
         <div class="panel">

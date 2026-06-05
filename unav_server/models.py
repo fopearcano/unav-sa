@@ -7,6 +7,8 @@ directly as request/response bodies elsewhere in the API.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field, model_validator
 
 from unav_core.data.schema import CatalogObject
@@ -55,6 +57,17 @@ class VisibleSectorRequest(BaseModel):
     sort: str = "distance"
     object_types: list[str] | None = None
     max_magnitude: float | None = None
+
+
+class MoveRequest(BaseModel):
+    """Body for ``POST /navigator/move`` — a single camera-relative step.
+
+    ``direction`` is relative to the navigator's current orientation; ``distance``
+    is the step length in parsecs. Orientation (direction/up) is unchanged.
+    """
+
+    direction: Literal["forward", "back", "left", "right", "up", "down"]
+    distance: float = Field(default=10.0, gt=0.0, description="Step length (parsecs).")
 
 
 class RenderPoint(BaseModel):

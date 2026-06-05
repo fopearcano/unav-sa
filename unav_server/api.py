@@ -17,6 +17,7 @@ from unav_server.models import (
     DatasetSummary,
     HealthResponse,
     ImportJsonlRequest,
+    MoveRequest,
     ObjectListResponse,
     RenderPayload,
     SkyRegionRequest,
@@ -109,6 +110,17 @@ def focus_object_endpoint(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@router.post("/navigator/move", response_model=NavigatorState)
+def move_navigator(
+    request: MoveRequest, service: StateService = Depends(get_service)
+) -> NavigatorState:
+    """Step the navigator one move in a camera-relative direction (persisted)."""
+    try:
+        return service.move(request.direction, request.distance)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.post("/visible-sector/query", response_model=VisibleSectorResponse)
 def visible_sector_query(
     request: VisibleSectorRequest, service: StateService = Depends(get_service)
@@ -131,6 +143,28 @@ def visible_sector_query(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     points = render_points(results)
     cap = effective_state.max_visible_objects
+    return VisibleSectorResponse(
+        count=len(points),
+        capped=len(points) >= cap,
+        max_visible_objects=cap,
+        objects=points,
+    )
+
+
+@router.post("/visible-sector/query-current", response_model=VisibleSectorResponse)
+def visible_sector_query_current(
+    service: StateService = Depends(get_service),
+) -> VisibleSectorResponse:
+    """Lightweight visible-sector for the server's CURRENT persisted navigator state.
+
+    The state-loop refresh action: query render objects from the authoritative
+    navigator state (no body). Obeys the state's ``max_visible_objects`` and sets
+    ``capped`` when the cap limited the result. Full metadata loads lazily via
+    ``GET /objects/{uid}`` on selection. See ``docs/VISIBLE_SECTOR_REFRESH_MODEL.md``.
+    """
+    state = service.get_state()
+    points = render_points(service.visible_sector_current())
+    cap = state.max_visible_objects
     return VisibleSectorResponse(
         count=len(points),
         capped=len(points) >= cap,

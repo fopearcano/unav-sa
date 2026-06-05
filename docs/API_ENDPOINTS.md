@@ -15,7 +15,9 @@ are the canonical `unav_core` models (`CatalogObject`, `NavigatorState`, `Route`
 | GET | `/navigator/state` | — | `NavigatorState` |
 | POST | `/navigator/state` | `NavigatorState` | `NavigatorState` |
 | POST | `/navigator/focus/{uid}` | query: `distance?` | `NavigatorState` (404/400) |
+| POST | `/navigator/move` | `{direction, distance?}` | `NavigatorState` (camera-relative step) |
 | POST | `/visible-sector/query` | `{state?, sort?, object_types?, max_magnitude?}` | `VisibleSectorResponse` (`{count, capped, max_visible_objects, objects:[RenderPoint]}`) |
+| POST | `/visible-sector/query-current` | — | `VisibleSectorResponse` (uses the current persisted state) |
 | POST | `/visible-sector/render` | `{state?, sort?, object_types?, max_magnitude?}` | `RenderPayload` (`{count, points:[RenderPoint]}`) |
 | GET | `/visible-sector/current/render` | — | `RenderPayload` |
 | GET | `/routes` | — | `[Route]` |
@@ -31,6 +33,13 @@ are the canonical `unav_core` models (`CatalogObject`, `NavigatorState`, `Route`
 - **Focus** aims the navigator at object `{uid}`; with `distance` it also sits
   that far away along the view. `404` if the object is unknown, `400` if it has no
   Cartesian position.
+- **Move** steps the navigator a camera-relative `direction`
+  (`forward`/`back`/`left`/`right`/`up`/`down`) by `distance` pc (default 10);
+  orientation and view params are preserved. Unknown direction or `distance <= 0`
+  → `422`. See [`NAVIGATOR_STATE_LOOP.md`](NAVIGATOR_STATE_LOOP.md).
+- **Query-current** computes the visible sector from the server's current
+  persisted navigator state (the UI's manual refresh). See
+  [`VISIBLE_SECTOR_REFRESH_MODEL.md`](VISIBLE_SECTOR_REFRESH_MODEL.md).
 - **Visible-sector** uses the posted `state`, or the server's current navigator
   state if `state` is omitted. `sort` is `distance` (default) or `magnitude`;
   `object_types` is a list of type names; `max_magnitude` caps brightness.
