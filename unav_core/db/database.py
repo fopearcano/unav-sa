@@ -17,7 +17,13 @@ from sqlalchemy import Engine, create_engine, func, select
 from sqlalchemy.pool import StaticPool
 
 from unav_core.data.schema import CatalogObject
-from unav_core.db.schema import metadata_obj, metadata_table, objects_table, row_to_object
+from unav_core.db.schema import (
+    datasets_table,
+    metadata_obj,
+    metadata_table,
+    objects_table,
+    row_to_object,
+)
 
 PathLike = str | Path
 
@@ -48,6 +54,12 @@ class Database:
     def count_objects(self) -> int:
         with self.connect() as conn:
             return int(conn.execute(select(func.count()).select_from(objects_table)).scalar_one())
+
+    def list_datasets(self) -> list[dict[str, Any]]:
+        """Return the recorded datasets (one dict per row of the datasets table)."""
+        with self.connect() as conn:
+            rows = conn.execute(select(datasets_table)).all()
+        return [dict(row._mapping) for row in rows]
 
     def fetch_objects(
         self,

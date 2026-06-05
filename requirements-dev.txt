@@ -8,8 +8,11 @@ ruff>=0.4
 mypy>=1.8
 build>=1.0
 
+# Local API server + test client (exercised by the API tests).
+fastapi>=0.110
+uvicorn>=0.29
+httpx>=0.27
+
 # Optional / future stacks — uncomment to develop against them locally:
 # astroquery>=0.4.7
 # pyvo>=1.5
-# fastapi>=0.110
-# uvicorn>=0.29

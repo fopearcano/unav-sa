@@ -86,9 +86,17 @@ target-version = "py310"
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.flake8-bugbear]
-# typer relies on calling Option()/Argument() in parameter defaults — idiomatic,
+# typer and FastAPI rely on calling these in parameter defaults — idiomatic,
 # not the B008 mutable-default antipattern.
-extend-immutable-calls = ["typer.Option", "typer.Argument"]
+extend-immutable-calls = [
+    "typer.Option",
+    "typer.Argument",
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+]
 
 [tool.mypy]
 python_version = "3.10"

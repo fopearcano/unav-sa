@@ -28,6 +28,12 @@ def search_by_name(db: Database, query: str, *, limit: int = _DEFAULT_LIMIT) -> 
     )
 
 
+def get_object(db: Database, uid: str) -> CatalogObject | None:
+    """Return the object with the given ``uid``, or ``None`` if absent."""
+    results = db.fetch_objects(where=objects_table.c.uid == uid, limit=1)
+    return results[0] if results else None
+
+
 def filter_by_source(
     db: Database, source: str, *, limit: int = _DEFAULT_LIMIT
 ) -> list[CatalogObject]:
