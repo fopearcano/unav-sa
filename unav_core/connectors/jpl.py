@@ -1,9 +1,13 @@
 """NASA/JPL Horizons connector: per-body ephemerides via ``astroquery.jplhorizons``.
 
-Fetches the sky position (and range) of solar-system bodies at a given epoch and
-normalises them to UNAV :class:`~unav_core.data.schema.CatalogObject` records.
+Fetches the sky position (and range) of solar-system bodies at a given **static
+epoch** and normalises them to UNAV
+:class:`~unav_core.data.schema.CatalogObject` records, including ICRS Cartesian
+``x/y/z`` (parsecs) so the bodies can be viewed in 3D. Well-known body names are
+classified (planet/moon) so the UI colours them distinctly.
 
-See ``docs/JPL_CONNECTOR.md`` and ``docs/DATA_FETCHING_SAFETY.md``.
+See ``docs/JPL_SOLAR_SYSTEM_WORKFLOW.md``, ``docs/EPOCH_OBJECTS.md``,
+``docs/JPL_CONNECTOR.md`` and ``docs/DATA_FETCHING_SAFETY.md``.
 """
 
 from __future__ import annotations
@@ -29,6 +33,27 @@ from unav_core.provenance.provenance import Provenance
 
 #: Default observer location (Horizons code). "@sun" = heliocentric.
 DEFAULT_CENTER = "@sun"
+
+#: Well-known body names -> object type (so the UI colours them distinctly).
+#: Numeric Horizons ids (e.g. "499") are not classified here -> ``UNKNOWN``.
+_PLANET_NAMES = frozenset(
+    {"mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"}
+)
+_MOON_NAMES = frozenset({"moon", "luna"})
+
+
+def classify_body(name: str) -> ObjectType:
+    """Classify a solar-system body by **name** (planet/moon), else ``UNKNOWN``.
+
+    Matching is case-insensitive. Pluto is grouped with the planets for display.
+    Numeric Horizons ids are not classified (use an explicit type for those).
+    """
+    key = str(name).strip().lower()
+    if key in _PLANET_NAMES:
+        return ObjectType.PLANET
+    if key in _MOON_NAMES:
+        return ObjectType.MOON
+    return ObjectType.UNKNOWN
 
 
 def fetch_jpl_body(
@@ -86,7 +111,8 @@ def _normalize_bodies(
     if isinstance(bodies, Mapping):
         return [(str(name), ObjectType.coerce(otype)) for name, otype in bodies.items()]
     if isinstance(bodies, Sequence) and not isinstance(bodies, (str, bytes)):
-        return [(str(name), ObjectType.UNKNOWN) for name in bodies]
+        # A bare list of names is classified by name (planets/moons), else unknown.
+        return [(str(name), classify_body(name)) for name in bodies]
     raise TypeError("bodies must be a sequence of names or a mapping {name: object_type}")
 
 
@@ -115,7 +141,7 @@ def _normalize_jpl_row(
         metadata["targetname"] = str(targetname)
 
     try:
-        return CatalogObject(
+        obj = CatalogObject(
             uid=f"jpl:{body}:{epoch}",
             source="JPL Horizons",
             object_type=ObjectType.coerce(object_type),
@@ -136,6 +162,13 @@ def _normalize_jpl_row(
         )
     except ValidationError as exc:
         raise MalformedResponseError(f"JPL row failed schema validation: {exc}") from exc
+
+    # Compute ICRS Cartesian x/y/z (parsecs) so the body is viewable in 3D.
+    # Solar-system distances are AU-scale, so x/y/z are tiny in parsecs (see
+    # docs/EPOCH_OBJECTS.md); a JPL-only 3D view auto-frames to that scale.
+    from unav_core.astro.enrich import enrich_object_coordinates
+
+    return enrich_object_coordinates(obj)
 
 
 def _epoch_to_jd(epoch: str | float) -> float:

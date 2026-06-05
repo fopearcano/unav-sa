@@ -65,10 +65,28 @@ def test_fetch_body_normalizes(monkeypatch) -> None:
     assert (obj.ra_deg, obj.dec_deg) == (150.5, -12.3)
     assert obj.apparent_magnitude == -0.5
     assert obj.metadata["distance_au"] == 1.52
+    assert obj.metadata["center"] == "@sun"
+    assert obj.metadata["epoch"] == "2451545.0"
     assert obj.distance_pc is not None and obj.distance_pc > 0.0
+    assert obj.has_cartesian  # enriched ICRS x/y/z -> viewable in 3D
     assert captured["id"] == "499"
     assert captured["location"] == "@sun"
     assert captured["epochs"] == 2451545.0  # numeric epoch passed through as JD
+
+
+def test_body_xyz_enriched(monkeypatch) -> None:
+    _install_fake_horizons(monkeypatch, _jpl_table())
+    obj = jpl.fetch_jpl_body("Mars", "2451545.0", object_type="planet")
+    assert obj.x is not None and obj.y is not None and obj.z is not None
+
+
+def test_classify_body() -> None:
+    assert jpl.classify_body("Mars") is ObjectType.PLANET
+    assert jpl.classify_body("earth") is ObjectType.PLANET
+    assert jpl.classify_body("Pluto") is ObjectType.PLANET  # grouped with planets
+    assert jpl.classify_body("Moon") is ObjectType.MOON
+    assert jpl.classify_body("499") is ObjectType.UNKNOWN  # numeric id -> unknown
+    assert jpl.classify_body("Ceres") is ObjectType.UNKNOWN
 
 
 def test_iso_epoch_converted_to_jd(monkeypatch) -> None:
@@ -92,10 +110,13 @@ def test_solar_system_mapping(monkeypatch) -> None:
     assert {o.object_type for o in objects} == {ObjectType.PLANET, ObjectType.ASTEROID}
 
 
-def test_solar_system_sequence_is_unknown(monkeypatch) -> None:
+def test_solar_system_sequence_classifies_by_name(monkeypatch) -> None:
     _install_fake_horizons(monkeypatch, _jpl_table())
-    objects = jpl.fetch_jpl_solar_system(["499", "599"], "2451545.0")
-    assert all(o.object_type is ObjectType.UNKNOWN for o in objects)
+    objects = jpl.fetch_jpl_solar_system(["Mars", "Moon", "599"], "2451545.0")
+    by_body = {o.metadata["body"]: o.object_type for o in objects}
+    assert by_body["Mars"] is ObjectType.PLANET
+    assert by_body["Moon"] is ObjectType.MOON
+    assert by_body["599"] is ObjectType.UNKNOWN  # numeric id -> unknown
 
 
 def test_astroquery_missing(monkeypatch) -> None:
