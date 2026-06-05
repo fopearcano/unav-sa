@@ -18,9 +18,11 @@ from unav_server.models import (
     HealthResponse,
     ImportJsonlRequest,
     ObjectListResponse,
+    RenderPayload,
     SkyRegionRequest,
     VisibleSectorRequest,
 )
+from unav_server.render import render_points
 from unav_server.state_service import StateService
 
 router = APIRouter()
@@ -126,6 +128,33 @@ def visible_sector_query(
 def visible_sector_current(service: StateService = Depends(get_service)) -> ObjectListResponse:
     results = service.visible_sector_current()
     return ObjectListResponse(count=len(results), objects=results)
+
+
+@router.post("/visible-sector/render", response_model=RenderPayload)
+def visible_sector_render(
+    request: VisibleSectorRequest, service: StateService = Depends(get_service)
+) -> RenderPayload:
+    """Lightweight 3D render payload (no metadata/provenance) for a navigator state."""
+    try:
+        objects = service.visible_sector(
+            state=request.state,
+            sort=request.sort,
+            object_types=request.object_types,
+            max_magnitude=request.max_magnitude,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    points = render_points(objects)
+    return RenderPayload(count=len(points), points=points)
+
+
+@router.get("/visible-sector/current/render", response_model=RenderPayload)
+def visible_sector_current_render(
+    service: StateService = Depends(get_service),
+) -> RenderPayload:
+    """Lightweight 3D render payload for the server's current navigator state."""
+    points = render_points(service.visible_sector_current())
+    return RenderPayload(count=len(points), points=points)
 
 
 @router.post("/sky/query-region", response_model=ObjectListResponse)

@@ -11,6 +11,7 @@ const API_BASE = window.UNAV_API_BASE || "";
 
 let selectedObject = null;
 let sky = null; // the SkyMap instance
+let wired3D = false;
 
 const $ = (id) => document.getElementById(id);
 const status = (msg) => { $("status").textContent = msg; };
@@ -106,6 +107,7 @@ async function selectObject(uid) {
     selectedObject = await api("/objects/" + encodeURIComponent(uid));
     renderSelected(selectedObject);
     sky.setSelected(uid);
+    if (window.UNAV3D) window.UNAV3D.highlight(uid);
     $("focus-btn").disabled = !hasCartesian(selectedObject);
     status("selected " + uid);
   } catch (err) { status("inspect failed: " + err.message); }
@@ -131,6 +133,7 @@ async function focusSelected() {
   try {
     const state = await api(`/navigator/focus/${encodeURIComponent(selectedObject.uid)}`, { method: "POST" });
     applyStateToForm(state);
+    if (window.UNAV3D) window.UNAV3D.focusUid(selectedObject.uid);
     status("focused on " + selectedObject.uid);
   } catch (err) { status("focus failed: " + err.message); }
 }
@@ -232,6 +235,48 @@ function renderLegend() {
   }
 }
 
+// --- 3D viewport ---
+
+function wire3D() {
+  if (wired3D || !window.UNAV3D) return;
+  wired3D = true;
+  window.UNAV3D.setOnSelect((uid) => selectObject(uid));
+  for (const id of ["render3d-btn", "sync3d-btn", "reset3d-btn"]) $(id).disabled = false;
+  $("render3d-btn").addEventListener("click", render3D);
+  $("sync3d-btn").addEventListener("click", syncNavigatorToView);
+  $("reset3d-btn").addEventListener("click", () => window.UNAV3D.resetView());
+  $("viewport3d-note").textContent = "drag to orbit · wheel to zoom · click a point";
+  render3D();
+}
+
+async function render3D() {
+  if (!window.UNAV3D) return;
+  try {
+    const body = await api("/visible-sector/render", {
+      method: "POST",
+      body: JSON.stringify({ state: readStateFromForm(), sort: "distance" }),
+    });
+    window.UNAV3D.setPoints(body.points);
+    if (selectedObject) window.UNAV3D.highlight(selectedObject.uid);
+    $("viewport3d-note").textContent = `${body.count} point(s) · drag/wheel · click to select`;
+    status(`3D: ${body.count} point(s)`);
+  } catch (err) { status("3D render failed: " + err.message); }
+}
+
+async function syncNavigatorToView() {
+  if (!window.UNAV3D) return;
+  const cam = window.UNAV3D.getCameraState();
+  const state = readStateFromForm();
+  state.position = cam.position;
+  state.direction = cam.direction;
+  state.up = cam.up;
+  try {
+    const updated = await api("/navigator/state", { method: "POST", body: JSON.stringify(state) });
+    applyStateToForm(updated);
+    status("navigator synced to 3D view");
+  } catch (err) { status("sync failed: " + err.message); }
+}
+
 // --- helpers ---
 
 function num(id) { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : 0; }
@@ -255,6 +300,13 @@ function init() {
   $("full-sky-btn").addEventListener("click", loadFullSky);
   $("load-region-btn").addEventListener("click", loadRegionInView);
   $("fit-btn").addEventListener("click", () => sky.fit());
+
+  // 3D viewport (Three.js module): wire when ready, with a graceful fallback.
+  window.addEventListener("unav3d-ready", wire3D);
+  if (window.UNAV3D) wire3D();
+  else setTimeout(() => {
+    if (!window.UNAV3D) $("viewport3d-note").textContent = "3D unavailable (WebGL/Three.js not loaded)";
+  }, 2500);
 
   loadHealth();
   loadDatasets();

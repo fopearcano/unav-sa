@@ -39,7 +39,9 @@ DCC **adapter** uses (see [`ADAPTER_COMMUNICATION_MODEL.md`](ADAPTER_COMMUNICATI
 
 ## Future
 
-- Add **Three.js** (vendored locally, still no build step) for the 3D viewport.
+- **Three.js** is now vendored locally (`unav_app/static/vendor/`, loaded via an
+  import map, no build step) for the 3D viewport — see
+  [`3D_NAVIGATOR_FOUNDATION.md`](3D_NAVIGATOR_FOUNDATION.md).
 - If the UI grows enough to need components/state management, introduce **Vite**
   under `unav_app/web/` then — and document the migration. Until then, static
   files under `unav_app/static/`.

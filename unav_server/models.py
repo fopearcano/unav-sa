@@ -57,6 +57,27 @@ class VisibleSectorRequest(BaseModel):
     max_magnitude: float | None = None
 
 
+class RenderPoint(BaseModel):
+    """A lightweight 3D render point (no metadata/provenance) for the viewport."""
+
+    uid: str
+    source: str
+    object_type: str
+    x: float
+    y: float
+    z: float
+    color: str
+    size: float
+    name: str | None = None
+
+
+class RenderPayload(BaseModel):
+    """A counted list of render points for the 3D viewport."""
+
+    count: int
+    points: list[RenderPoint]
+
+
 class SkyRegionRequest(BaseModel):
     """Body for ``POST /sky/query-region`` — an RA/Dec box (degrees).
 

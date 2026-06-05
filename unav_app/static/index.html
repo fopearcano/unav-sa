@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>UNAV-SA — Standalone Navigator</title>
     <link rel="stylesheet" href="style.css" />
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three.module.min.js" } }
+    </script>
   </head>
   <body>
     <header class="topbar">
@@ -78,13 +81,13 @@
         </div>
 
         <div class="panel">
-          <h2>3D view</h2>
-          <div id="viewport3d" class="viewport3d">
-            <div>
-              <div class="big">3D viewport placeholder</div>
-              <div class="muted">Cartesian x/y/z (parsecs). Three.js integration is planned.</div>
-            </div>
+          <h2>3D navigator (x/y/z pc) <span class="muted" id="viewport3d-note">initialising…</span></h2>
+          <div class="row toolbar">
+            <button id="render3d-btn" class="chip" disabled>Render visible sector</button>
+            <button id="sync3d-btn" class="chip" disabled>Sync navigator to view</button>
+            <button id="reset3d-btn" class="chip" disabled>Reset view</button>
           </div>
+          <div id="viewport3d" class="viewport3d"></div>
         </div>
       </section>
     </main>
@@ -93,5 +96,6 @@
 
     <script src="sky.js"></script>
     <script src="app.js"></script>
+    <script type="module" src="viewport3d.js"></script>
   </body>
 </html>
