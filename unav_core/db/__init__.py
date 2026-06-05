@@ -11,7 +11,7 @@ SQLite baseline by default). Responsibilities:
 The cache is a bounded *working set*, not a full survey mirror.
 """
 
-from unav_core.db.database import Database
+from unav_core.db.database import Database, get_db_info
 from unav_core.db.importer import ImportSummary, import_jsonl_to_db, import_objects
 from unav_core.db.planning import (
     delete_bookmark,
@@ -42,6 +42,7 @@ from unav_core.db.spatial import angular_separation_deg, cone_search
 
 __all__ = [
     "Database",
+    "get_db_info",
     "ImportSummary",
     "import_jsonl_to_db",
     "import_objects",

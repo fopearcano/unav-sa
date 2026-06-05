@@ -94,6 +94,51 @@ class Database:
         self.dispose()
 
 
+def get_db_info(db_path: PathLike) -> dict[str, Any]:
+    """Summarise a database for inspection (datasets, objects, source/type counts).
+
+    Accepts a ``str`` or :class:`~pathlib.Path`. Opening a missing file path creates
+    an empty database (the schema is applied on connect), so counts are ``0`` there.
+    """
+    db = Database(db_path)
+    cols = objects_table.c
+    try:
+        datasets = db.list_datasets()
+        with db.connect() as conn:
+            object_count = int(
+                conn.execute(select(func.count()).select_from(objects_table)).scalar_one()
+            )
+            by_source = {
+                row[0]: int(row[1])
+                for row in conn.execute(
+                    select(cols.source, func.count())
+                    .group_by(cols.source)
+                    .order_by(func.count().desc())
+                )
+            }
+            by_type = {
+                row[0]: int(row[1])
+                for row in conn.execute(
+                    select(cols.object_type, func.count())
+                    .group_by(cols.object_type)
+                    .order_by(func.count().desc())
+                )
+            }
+    finally:
+        db.dispose()
+    return {
+        "database": str(db_path),
+        "dataset_count": len(datasets),
+        "object_count": object_count,
+        "datasets": [
+            {"name": d["name"], "source": d["source"], "objects": d["object_count"]}
+            for d in datasets
+        ],
+        "by_source": by_source,
+        "by_type": by_type,
+    }
+
+
 def _make_engine(db_path: str) -> Engine:
     if db_path == ":memory:":
         # A shared in-memory database (StaticPool) so one Database instance sees
