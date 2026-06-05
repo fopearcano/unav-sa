@@ -28,14 +28,16 @@ if str(_REPO_ROOT) not in sys.path:
 import typer  # noqa: E402
 from rich.console import Console  # noqa: E402
 
+from unav_core.config import load_config  # noqa: E402
 from unav_core.data.sample_generator import write_sample_catalog  # noqa: E402
 from unav_core.db import Database, import_jsonl_to_db  # noqa: E402
 
 app = typer.Typer(add_completion=False, help=__doc__)
 console = Console()
 
-_DEFAULT_SAMPLE = _REPO_ROOT / "samples" / "sample_catalog.jsonl"
-_DEFAULT_DB = _REPO_ROOT / "data" / "unav.db"
+_CONFIG = load_config()
+_DEFAULT_SAMPLE = _CONFIG.sample_catalog_path
+_DEFAULT_DB = _CONFIG.database_path
 
 
 def prepare(*, db: Path, sample: Path, count: int, seed: int, fresh: bool) -> None:
@@ -77,8 +79,8 @@ def prepare(*, db: Path, sample: Path, count: int, seed: int, fresh: bool) -> No
 @app.command()
 def main(
     db: Path = typer.Option(_DEFAULT_DB, "--db", help="SQLite database path."),
-    host: str = typer.Option("127.0.0.1", "--host", help="Bind address (localhost)."),
-    port: int = typer.Option(8765, "--port", help="Port to listen on."),
+    host: str = typer.Option(_CONFIG.server_host, "--host", help="Bind address (localhost)."),
+    port: int = typer.Option(_CONFIG.server_port, "--port", help="Port to listen on."),
     count: int = typer.Option(100, "--count", help="Sample objects to generate if missing."),
     seed: int = typer.Option(42, "--seed", help="Sample RNG seed."),
     fresh: bool = typer.Option(False, "--fresh", help="Rebuild the database from scratch."),

@@ -16,6 +16,10 @@ wheels/
 venv/
 env/
 ENV/
+
+# --- Local config (the example is committed; a developer's own .env is not) ---
+.env
+!.env.example
 .python-version
 
 # --- Tooling caches ---
