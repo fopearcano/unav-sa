@@ -10,7 +10,20 @@ _STATE = {
     "cone_angle_degrees": 30.0,
 }
 
-_POINT_FIELDS = {"uid", "source", "object_type", "x", "y", "z", "color", "size", "name"}
+_POINT_FIELDS = {
+    "uid",
+    "name",
+    "source",
+    "object_type",
+    "x",
+    "y",
+    "z",
+    "ra_deg",
+    "dec_deg",
+    "distance_pc",
+    "display_color",
+    "display_size",
+}
 
 
 def test_current_render_payload_shape(client: TestClient) -> None:
@@ -20,8 +33,8 @@ def test_current_render_payload_shape(client: TestClient) -> None:
     assert {p["uid"] for p in body["points"]} == {"gaia:1", "gaia:2"}
     point = body["points"][0]
     assert set(point) == _POINT_FIELDS
-    assert point["color"].startswith("#")
-    assert isinstance(point["size"], (int, float))
+    assert point["display_color"].startswith("#")
+    assert isinstance(point["display_size"], (int, float))
 
 
 def test_render_payload_is_slim(client: TestClient) -> None:
@@ -29,13 +42,13 @@ def test_render_payload_is_slim(client: TestClient) -> None:
     assert "metadata" not in point
     assert "provenance" not in point
     assert "redshift" not in point
-    assert "apparent_magnitude" not in point
+    assert "apparent_magnitude" not in point  # replaced by display_size
 
 
 def test_render_color_by_type(client: TestClient) -> None:
     points = {p["uid"]: p for p in client.get("/visible-sector/current/render").json()["points"]}
     assert points["gaia:1"]["object_type"] == "star"
-    assert points["gaia:1"]["color"] == "#cfe8ff"  # the star colour
+    assert points["gaia:1"]["display_color"] == "#cfe8ff"  # the star colour
 
 
 def test_render_with_explicit_state(client: TestClient) -> None:

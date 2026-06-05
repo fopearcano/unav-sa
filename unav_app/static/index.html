@@ -69,25 +69,39 @@
         </div>
 
         <div class="panel">
-          <h2>2D sky navigator (RA/Dec) <span class="muted" id="plot-note"></span></h2>
-          <div class="row toolbar">
-            <button id="full-sky-btn" class="chip">Full sky</button>
-            <button id="load-region-btn" class="chip">Load region in view</button>
-            <button id="fit-btn" class="chip">Fit</button>
-            <span class="muted hint">drag to pan · wheel to zoom · click a point to select</span>
+          <div class="row toolbar viewhead">
+            <h2 class="inline">Navigator viewport</h2>
+            <span class="seg" role="group" aria-label="view toggle">
+              <button id="view-3d-btn" class="chip active" type="button">3D points</button>
+              <button id="view-2d-btn" class="chip" type="button">2D sky</button>
+            </span>
           </div>
-          <canvas id="sky"></canvas>
-          <div id="legend" class="legend"></div>
-        </div>
+          <div id="visible-status" class="muted">
+            visible sector: — <span class="hint">run “Query visible sector”.</span>
+          </div>
 
-        <div class="panel">
-          <h2>3D navigator (x/y/z pc) <span class="muted" id="viewport3d-note">initialising…</span></h2>
-          <div class="row toolbar">
-            <button id="render3d-btn" class="chip" disabled>Render visible sector</button>
-            <button id="sync3d-btn" class="chip" disabled>Sync navigator to view</button>
-            <button id="reset3d-btn" class="chip" disabled>Reset view</button>
+          <!-- 3D point view (default) -->
+          <div id="view-3d" class="view">
+            <div class="row toolbar">
+              <button id="render3d-btn" class="chip" disabled>Render visible sector</button>
+              <button id="sync3d-btn" class="chip" disabled>Sync navigator to view</button>
+              <button id="reset3d-btn" class="chip" disabled>Reset view</button>
+              <span class="muted hint" id="viewport3d-note">initialising…</span>
+            </div>
+            <div id="viewport3d" class="viewport3d"></div>
           </div>
-          <div id="viewport3d" class="viewport3d"></div>
+
+          <!-- 2D sky view (RA/Dec) -->
+          <div id="view-2d" class="view hidden">
+            <div class="row toolbar">
+              <button id="full-sky-btn" class="chip">Full sky</button>
+              <button id="load-region-btn" class="chip">Load region in view</button>
+              <button id="fit-btn" class="chip">Fit</button>
+              <span class="muted hint" id="plot-note">drag · wheel · click a point</span>
+            </div>
+            <canvas id="sky"></canvas>
+            <div id="legend" class="legend"></div>
+          </div>
         </div>
       </section>
     </main>

@@ -160,7 +160,7 @@ class SkyMap {
     if (p.x < -10 || p.x > this.W + 10 || p.y < -10 || p.y > this.H + 10) return;
     const ctx = this.ctx;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, _sizeForMag(o.apparent_magnitude), 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, _pointSize(o), 0, Math.PI * 2);
     ctx.fillStyle = SKY_TYPE_COLORS[o.object_type] || SKY_TYPE_COLORS.unknown;
     ctx.fill();
   }
@@ -171,7 +171,7 @@ class SkyMap {
     const p = this._project(o.ra_deg, o.dec_deg);
     const ctx = this.ctx;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, _sizeForMag(o.apparent_magnitude) + 4, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, _pointSize(o) + 4, 0, Math.PI * 2);
     ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
   }
 
@@ -239,6 +239,15 @@ class SkyMap {
 function _sizeForMag(mag) {
   if (mag === null || mag === undefined) return 2.5;
   return _clamp(6 - mag / 3, 1.5, 7);
+}
+
+// Prefer a server-provided display size (visible-sector render objects); else
+// derive it from apparent magnitude (full records from search / sky region).
+function _pointSize(o) {
+  if (o.display_size !== undefined && o.display_size !== null) {
+    return _clamp(o.display_size, 1.5, 7);
+  }
+  return _sizeForMag(o.apparent_magnitude);
 }
 
 window.SkyMap = SkyMap;

@@ -58,24 +58,47 @@ class VisibleSectorRequest(BaseModel):
 
 
 class RenderPoint(BaseModel):
-    """A lightweight 3D render point (no metadata/provenance) for the viewport."""
+    """A lightweight render object (no metadata/provenance) for the viewports.
+
+    Carries only what a viewport (or a thin adapter) needs to draw and identify a
+    point: identity, Cartesian + sky position, and presentation (display colour
+    and size). Full records load lazily via ``GET /objects/{uid}`` on selection —
+    metadata is never shipped per point. See ``docs/RENDER_PAYLOAD.md``.
+    """
 
     uid: str
+    name: str | None = None
     source: str
     object_type: str
     x: float
     y: float
     z: float
-    color: str
-    size: float
-    name: str | None = None
+    ra_deg: float | None = None
+    dec_deg: float | None = None
+    distance_pc: float | None = None
+    display_color: str
+    display_size: float
 
 
 class RenderPayload(BaseModel):
-    """A counted list of render points for the 3D viewport."""
+    """A counted list of render points (the adapter-facing render endpoints)."""
 
     count: int
     points: list[RenderPoint]
+
+
+class VisibleSectorResponse(BaseModel):
+    """Lightweight visible-sector result for the navigator viewports.
+
+    ``objects`` are render objects (no metadata/provenance). ``capped`` is true
+    when the result was limited by the state's ``max_visible_objects`` — more
+    objects may be visible than were returned, and the UI warns when it is set.
+    """
+
+    count: int
+    capped: bool
+    max_visible_objects: int
+    objects: list[RenderPoint]
 
 
 class SkyRegionRequest(BaseModel):

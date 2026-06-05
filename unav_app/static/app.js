@@ -12,6 +12,7 @@ const API_BASE = window.UNAV_API_BASE || "";
 let selectedObject = null;
 let sky = null; // the SkyMap instance
 let wired3D = false;
+let currentView = "3d"; // "3d" | "2d" — which viewport is shown
 
 const $ = (id) => document.getElementById(id);
 const status = (msg) => { $("status").textContent = msg; };
@@ -172,16 +173,51 @@ async function setState() {
   } catch (err) { status("set state failed: " + err.message); }
 }
 
-async function queryVisible() {
+// One action drives both viewports: query the visible sector (lightweight render
+// objects), then update the 3D points, the results list, the 2D sky, the object
+// count and the cap warning.
+async function queryVisibleSector() {
   try {
     const body = await api("/visible-sector/query", {
       method: "POST",
       body: JSON.stringify({ state: readStateFromForm(), sort: "distance" }),
     });
-    $("visible-summary").textContent = `visible: ${body.count} object(s)`;
-    renderResults(body.objects);
+    if (window.UNAV3D) {
+      window.UNAV3D.setPoints(body.objects);
+      if (selectedObject) window.UNAV3D.highlight(selectedObject.uid);
+      $("viewport3d-note").textContent =
+        `${body.count} point(s) · drag orbit · right-drag pan · wheel zoom · click to select`;
+    }
+    renderResults(body.objects); // results list + 2D sky (objects carry ra/dec)
+    updateVisibleStatus(body);
     status(`visible sector: ${body.count} object(s)`);
   } catch (err) { status("visible-sector failed: " + err.message); }
+}
+
+function updateVisibleStatus(body) {
+  $("visible-summary").textContent = `visible: ${body.count} object(s)`;
+  let msg = `visible sector: ${body.count} object(s)`;
+  if (body.capped) {
+    msg += ` — ⚠ result cap reached (max ${body.max_visible_objects}); increase “max” to see more.`;
+    $("visible-status").className = "warn";
+  } else {
+    $("visible-status").className = "muted";
+  }
+  $("visible-status").textContent = msg;
+}
+
+// --- 2D / 3D view toggle ---
+
+function showView(which) {
+  currentView = which;
+  const is3d = which === "3d";
+  $("view-3d").classList.toggle("hidden", !is3d);
+  $("view-2d").classList.toggle("hidden", is3d);
+  $("view-3d-btn").classList.toggle("active", is3d);
+  $("view-2d-btn").classList.toggle("active", !is3d);
+  // The hidden view had zero size while collapsed; refresh the now-visible one.
+  if (is3d && window.UNAV3D) window.UNAV3D.resize();
+  if (!is3d && sky) sky.resize();
 }
 
 // --- sky region loading ---
@@ -242,25 +278,12 @@ function wire3D() {
   wired3D = true;
   window.UNAV3D.setOnSelect((uid) => selectObject(uid));
   for (const id of ["render3d-btn", "sync3d-btn", "reset3d-btn"]) $(id).disabled = false;
-  $("render3d-btn").addEventListener("click", render3D);
+  $("render3d-btn").addEventListener("click", queryVisibleSector);
   $("sync3d-btn").addEventListener("click", syncNavigatorToView);
   $("reset3d-btn").addEventListener("click", () => window.UNAV3D.resetView());
-  $("viewport3d-note").textContent = "drag to orbit · wheel to zoom · click a point";
-  render3D();
-}
-
-async function render3D() {
-  if (!window.UNAV3D) return;
-  try {
-    const body = await api("/visible-sector/render", {
-      method: "POST",
-      body: JSON.stringify({ state: readStateFromForm(), sort: "distance" }),
-    });
-    window.UNAV3D.setPoints(body.points);
-    if (selectedObject) window.UNAV3D.highlight(selectedObject.uid);
-    $("viewport3d-note").textContent = `${body.count} point(s) · drag/wheel · click to select`;
-    status(`3D: ${body.count} point(s)`);
-  } catch (err) { status("3D render failed: " + err.message); }
+  $("viewport3d-note").textContent =
+    "drag to orbit · right-drag to pan · wheel to zoom · click a point";
+  queryVisibleSector(); // populate the 3D view on load
 }
 
 async function syncNavigatorToView() {
@@ -296,10 +319,14 @@ function init() {
   $("search-form").addEventListener("submit", doSearch);
   $("focus-btn").addEventListener("click", focusSelected);
   $("set-state-btn").addEventListener("click", setState);
-  $("visible-btn").addEventListener("click", queryVisible);
+  $("visible-btn").addEventListener("click", queryVisibleSector);
   $("full-sky-btn").addEventListener("click", loadFullSky);
   $("load-region-btn").addEventListener("click", loadRegionInView);
   $("fit-btn").addEventListener("click", () => sky.fit());
+
+  // 2D / 3D view toggle.
+  $("view-3d-btn").addEventListener("click", () => showView("3d"));
+  $("view-2d-btn").addEventListener("click", () => showView("2d"));
 
   // 3D viewport (Three.js module): wire when ready, with a graceful fallback.
   window.addEventListener("unav3d-ready", wire3D);

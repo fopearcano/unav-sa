@@ -4,8 +4,11 @@ The first real 3D point-space view: the standalone shell renders the visible
 sector as GPU points in Cartesian `x/y/z` (parsecs) with an orbit camera and
 click-picking. It is a **navigator aid**, not a render engine.
 
-> Phase 12 scope. Frontend: `unav_app/static/viewport3d.js` (Three.js). Backend:
-> a lightweight render payload (see [`FRONTEND_RENDER_PAYLOAD.md`](FRONTEND_RENDER_PAYLOAD.md)).
+> Phase 12 scope (foundation). Frontend: `unav_app/static/viewport3d.js`
+> (Three.js). Backend: a lightweight render payload. The current view —
+> orbit/pan/zoom, the 2D/3D toggle, the object count and the cap warning — is
+> documented in [`THREE_D_VIEW.md`](THREE_D_VIEW.md); the payload in
+> [`RENDER_PAYLOAD.md`](RENDER_PAYLOAD.md).
 
 ## Stack: Three.js, vendored, no build
 
@@ -28,7 +31,8 @@ rest of the app keeps working.
   `BufferGeometry` with per-point `position`, `pColor` and `size` attributes.
 - **Colour by type / size by magnitude** — taken from the server render payload
   (the server owns the palette; the viewport just renders).
-- **Camera controls** — orbit (drag to rotate, wheel to zoom), `Reset view`.
+- **Camera controls** — orbit (drag), pan (right-drag or shift-drag), zoom
+  (wheel), `Reset view`.
 - **Selection / picking** — click a point; CPU projection finds the nearest point
   within a pixel threshold, marks it, and selects it (shared with the 2D map and
   the metadata panel). Selecting elsewhere highlights it in 3D too.
@@ -41,7 +45,7 @@ The 3D camera and the navigator state are linked by explicit, **manual** actions
 
 | Button | Effect |
 | --- | --- |
-| **Render visible sector** | `POST /visible-sector/render` with the current navigator state (from the state panel) → set points, frame the camera. |
+| **Query visible sector** / **Render visible sector** | `POST /visible-sector/query` with the current navigator state (from the state panel) → set points, frame the camera, update the count/cap. |
 | **Sync navigator to view** | read the 3D camera pose → `POST /navigator/state` (the frontend camera updates the navigator state). |
 | **Reset view** | reframe the camera to the loaded points. |
 | **Focus navigator on object** | `POST /navigator/focus/{uid}` and centre the 3D orbit on the object. |
@@ -53,10 +57,10 @@ So: drive the cone via the state panel → **Render**; or orbit in 3D → **Sync
 
 - Target **≥ 10k points**; not millions. One Points object / draw call handles
   10k easily; picking is `O(n)` per click (fine at 10k).
-- The render payload is **lightweight** — `uid/source/object_type/x/y/z/color/size`
-  (+ optional `name`), with **no metadata or provenance**. Full records are
-  fetched per-object only on selection (`GET /objects/{uid}`), so metadata is
-  never loaded for every point.
+- The render payload is **lightweight** — render objects with
+  `uid/name/source/object_type/x/y/z/ra_deg/dec_deg/distance_pc/display_color/display_size`,
+  with **no metadata or provenance**. Full records are fetched per-object only on
+  selection (`GET /objects/{uid}`), so metadata is never loaded for every point.
 
 ## Explicitly out of scope (no renderer-engine creep)
 

@@ -52,10 +52,12 @@ connection error → surface "UNAV server not reachable" and offer the file fall
 | List / read missions | `GET /missions` | camera-path baking. |
 
 The adapter prefers the **render** endpoints (`/visible-sector/.../render`) for
-scene building — they return the lightweight payload
-(`uid/source/object_type/x/y/z/color/size/name`) with **no** metadata/provenance,
-so thousands of points stay cheap. Full `CatalogObject`s are fetched per-object
-via `GET /objects/{uid}` only when the artist selects a point.
+scene building — they return the lightweight payload (render objects with
+`uid/name/source/object_type/x/y/z/ra_deg/dec_deg/distance_pc/display_color/display_size`)
+with **no** metadata/provenance, so thousands of points stay cheap. Full
+`CatalogObject`s are fetched per-object via `GET /objects/{uid}` only when the
+artist selects a point. (`POST /visible-sector/query` returns the same render
+objects plus a `capped` flag; see [`../../../docs/RENDER_PAYLOAD.md`](../../../docs/RENDER_PAYLOAD.md).)
 
 ### Example: build the point cloud
 
@@ -65,15 +67,16 @@ GET /visible-sector/current/render
 {
   "count": 2,
   "points": [
-    {"uid":"gaia:1","source":"Gaia DR3","object_type":"star",
-     "x":0.96,"y":-5.9,"z":4.8,"color":"#cfe8ff","size":4.99,"name":"Vega"}
+    {"uid":"gaia:1","name":"Vega","source":"Gaia DR3","object_type":"star",
+     "x":0.96,"y":-5.9,"z":4.8,"ra_deg":279.2,"dec_deg":38.8,"distance_pc":7.68,
+     "display_color":"#cfe8ff","display_size":4.99}
   ]
 }
 ```
 
 The adapter maps each point's `x/y/z` (parsecs, right-handed) into the C4D scene
 (see the mapping in [`C4D_ADAPTER_PLAN.md`](C4D_ADAPTER_PLAN.md#coordinate--units-mapping)),
-colours by `color`, scales by `size`.
+colours by `display_color`, scales by `display_size`.
 
 ### Example: push the camera back
 

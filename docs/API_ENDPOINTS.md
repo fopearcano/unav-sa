@@ -15,7 +15,9 @@ are the canonical `unav_core` models (`CatalogObject`, `NavigatorState`, `Route`
 | GET | `/navigator/state` | — | `NavigatorState` |
 | POST | `/navigator/state` | `NavigatorState` | `NavigatorState` |
 | POST | `/navigator/focus/{uid}` | query: `distance?` | `NavigatorState` (404/400) |
-| POST | `/visible-sector/query` | `{state?, sort?, object_types?, max_magnitude?}` | `{count, objects}` |
+| POST | `/visible-sector/query` | `{state?, sort?, object_types?, max_magnitude?}` | `VisibleSectorResponse` (`{count, capped, max_visible_objects, objects:[RenderPoint]}`) |
+| POST | `/visible-sector/render` | `{state?, sort?, object_types?, max_magnitude?}` | `RenderPayload` (`{count, points:[RenderPoint]}`) |
+| GET | `/visible-sector/current/render` | — | `RenderPayload` |
 | GET | `/routes` | — | `[Route]` |
 | POST | `/routes` | `Route` | `Route` |
 | GET | `/missions` | — | `[Mission]` |
@@ -32,7 +34,11 @@ are the canonical `unav_core` models (`CatalogObject`, `NavigatorState`, `Route`
 - **Visible-sector** uses the posted `state`, or the server's current navigator
   state if `state` is omitted. `sort` is `distance` (default) or `magnitude`;
   `object_types` is a list of type names; `max_magnitude` caps brightness.
-  Unknown `sort` → `400`.
+  Unknown `sort` → `400`. `/visible-sector/query` returns **lightweight render
+  objects** (no metadata/provenance) plus a `capped` flag; the `*/render`
+  variants return the same objects as `points` for adapters. See
+  [`RENDER_PAYLOAD.md`](RENDER_PAYLOAD.md). Full records load via
+  `GET /objects/{uid}` on selection.
 - **Invalid bodies** (e.g. an out-of-range `fov_degrees`) yield FastAPI's `422`.
 - **`/datasets/import-jsonl`** reads a server-local path; missing file → `404`.
 

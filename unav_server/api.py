@@ -21,6 +21,7 @@ from unav_server.models import (
     RenderPayload,
     SkyRegionRequest,
     VisibleSectorRequest,
+    VisibleSectorResponse,
 )
 from unav_server.render import render_points
 from unav_server.state_service import StateService
@@ -108,10 +109,17 @@ def focus_object_endpoint(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.post("/visible-sector/query", response_model=ObjectListResponse)
+@router.post("/visible-sector/query", response_model=VisibleSectorResponse)
 def visible_sector_query(
     request: VisibleSectorRequest, service: StateService = Depends(get_service)
-) -> ObjectListResponse:
+) -> VisibleSectorResponse:
+    """Lightweight visible-sector render objects (no metadata) for the viewports.
+
+    Returns slim render objects (id/name, type/source, Cartesian + sky position,
+    display colour/size); full metadata loads lazily via ``GET /objects/{uid}``.
+    ``capped`` flags that the state's ``max_visible_objects`` limited the result.
+    """
+    effective_state = request.state or service.get_state()
     try:
         results = service.visible_sector(
             state=request.state,
@@ -121,7 +129,14 @@ def visible_sector_query(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return ObjectListResponse(count=len(results), objects=results)
+    points = render_points(results)
+    cap = effective_state.max_visible_objects
+    return VisibleSectorResponse(
+        count=len(points),
+        capped=len(points) >= cap,
+        max_visible_objects=cap,
+        objects=points,
+    )
 
 
 @router.get("/visible-sector/current", response_model=ObjectListResponse)

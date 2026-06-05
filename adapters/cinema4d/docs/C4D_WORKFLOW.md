@@ -51,8 +51,8 @@ between UNAV-SA and a C4D scene. Technical details live in
 3. **Build the visible sector.** **Pull points** →
    `GET /visible-sector/current/render` (or `POST /visible-sector/render` for a
    chosen pose). The adapter builds a **lightweight** point representation, one
-   cloud per object type, coloured by the payload `color` and scaled by `size`.
-   No per-object metadata is loaded here.
+   cloud per object type, coloured by the payload `display_color` and scaled by
+   `display_size`. No per-object metadata is loaded here.
 
 4. **Inspect an object.** Pick a point → the adapter reads its `uid` and calls
    `GET /objects/{uid}` to show the full record (name, type, source, coordinates,

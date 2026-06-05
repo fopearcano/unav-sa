@@ -30,8 +30,9 @@ state, coordinates, queries, validation and provenance.
    null containing a `CameraObject` and, where useful, a target null) that mirrors
    the UNAV navigator camera.
 4. **Create a lightweight visible-sector representation (if needed).** From the
-   **render payload** (`uid/x/y/z/color/size`), build a *single* point/cloud
-   representation per object type (not one object per point) — see "Visibility".
+   **render payload** (`uid/x/y/z/display_color/display_size`), build a *single*
+   point/cloud representation per object type (not one object per point) — see
+   "Visibility".
 5. **Bake a mission to the C4D timeline.** Map mission segment cameras to keyframes
    at frame times derived from the segment durations and the document FPS; let
    C4D interpolate between keys.

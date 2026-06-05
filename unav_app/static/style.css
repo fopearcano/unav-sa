@@ -113,6 +113,17 @@ canvas#sky {
 .chip { padding: 5px 10px; font-size: 12px; }
 .hint { margin-left: auto; }
 
+.hidden { display: none; }
+.view { margin-top: 4px; }
+.warn { color: var(--warn); font-size: 12px; }
+
+/* viewport header: title + 2D/3D toggle on one row */
+.viewhead { justify-content: space-between; margin-bottom: 6px; }
+h2.inline { margin: 0; }
+.seg { display: inline-flex; gap: 4px; margin-left: auto; }
+.seg .chip { background: var(--panel-2); }
+.seg .chip.active { background: #16385c; border-color: #2c6aa0; color: var(--ink); }
+
 .legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; font-size: 11px; color: var(--muted); }
 .legend-item { display: inline-flex; align-items: center; gap: 5px; }
 .swatch { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }

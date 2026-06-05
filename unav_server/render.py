@@ -1,13 +1,14 @@
-"""Build the lightweight 3D render payload from catalog objects.
+"""Build the lightweight render payload from catalog objects.
 
-This is a *presentation* mapping for the standalone 3D viewport: each renderable
+This is a *presentation* mapping for the standalone viewports: each renderable
 object becomes a slim :class:`~unav_server.models.RenderPoint` carrying only what
-the viewport needs (id, type/source, Cartesian position, a display colour and
-size, and an optional name) — **no metadata or provenance**. Full records are
-fetched per-object only when one is selected (``GET /objects/{uid}``).
+a viewport needs (id/name, type/source, Cartesian + sky position, and a display
+colour and size) — **no metadata or provenance**. Full records are fetched
+per-object only when one is selected (``GET /objects/{uid}``).
 
-Colour-by-type and size-by-magnitude live here (the server side of the same
-palette the 2D map uses); they are not astronomy and stay out of ``unav_core``.
+Colour-by-type and size-by-magnitude (``display_color`` / ``display_size``) live
+here (the server side of the same palette the 2D map uses); they are presentation,
+not astronomy, and stay out of ``unav_core``. See ``docs/RENDER_PAYLOAD.md``.
 """
 
 from __future__ import annotations
@@ -46,7 +47,7 @@ def size_for_magnitude(magnitude: float | None) -> float:
 
 
 def render_points(objects: Iterable[CatalogObject]) -> list[RenderPoint]:
-    """Map objects with a Cartesian position to slim render points."""
+    """Map objects with a Cartesian position to slim render objects."""
     points: list[RenderPoint] = []
     for obj in objects:
         if obj.x is None or obj.y is None or obj.z is None:
@@ -55,14 +56,17 @@ def render_points(objects: Iterable[CatalogObject]) -> list[RenderPoint]:
         points.append(
             RenderPoint(
                 uid=obj.uid,
+                name=obj.name,
                 source=obj.source,
                 object_type=type_name,
                 x=obj.x,
                 y=obj.y,
                 z=obj.z,
-                color=color_for_type(type_name),
-                size=size_for_magnitude(obj.apparent_magnitude),
-                name=obj.name,
+                ra_deg=obj.ra_deg,
+                dec_deg=obj.dec_deg,
+                distance_pc=obj.distance_pc,
+                display_color=color_for_type(type_name),
+                display_size=size_for_magnitude(obj.apparent_magnitude),
             )
         )
     return points

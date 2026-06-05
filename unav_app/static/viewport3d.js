@@ -2,10 +2,11 @@
  * UNAV-SA — 3D point-space viewport (Three.js, vendored locally).
  *
  * Renders the visible-sector render payload (Cartesian x/y/z parsecs) as GPU
- * points: colour and size come from the server payload. Basic orbit camera
- * (drag = rotate, wheel = zoom), CPU click-picking for selection, and a
- * selection marker. It is a *navigator aid*, not a render engine — no lighting,
- * materials, or scene authoring. See docs/3D_NAVIGATOR_FOUNDATION.md.
+ * points: colour and size come from the server payload (display_color /
+ * display_size). Orbit camera (drag = orbit, right-drag or shift-drag = pan,
+ * wheel = zoom), CPU click-picking for selection, and a selection marker. It is a
+ * *navigator aid*, not a render engine — no lighting, materials, or scene
+ * authoring. See docs/THREE_D_VIEW.md.
  */
 import * as THREE from "three";
 
@@ -85,9 +86,9 @@ function createViewport(container) {
     for (let i = 0; i < n; i++) {
       const p = pointData[i];
       pos[i * 3] = p.x; pos[i * 3 + 1] = p.y; pos[i * 3 + 2] = p.z;
-      const [r, g, b] = hexToRgb(p.color);
+      const [r, g, b] = hexToRgb(p.display_color || p.color);
       col[i * 3] = r; col[i * 3 + 1] = g; col[i * 3 + 2] = b;
-      siz[i] = (p.size || 2.5) * 1.6;
+      siz[i] = (p.display_size || p.size || 2.5) * 1.6;
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
@@ -129,6 +130,17 @@ function createViewport(container) {
     highlight(uid);
   }
 
+  // Pan: translate the orbit target (and camera) across the view plane.
+  function panBy(dxPx, dyPx) {
+    camera.updateMatrixWorld();
+    const right = new THREE.Vector3(), up = new THREE.Vector3(), fwd = new THREE.Vector3();
+    camera.matrixWorld.extractBasis(right, up, fwd);
+    const k = radius / Math.max(1, container.clientHeight); // ~world units per pixel
+    target.addScaledVector(right, -dxPx * k);
+    target.addScaledVector(up, dyPx * k);
+    updateCamera();
+  }
+
   function getCameraState() {
     const dir = target.clone().sub(camera.position);
     if (dir.lengthSq() === 0) camera.getWorldDirection(dir);
@@ -161,21 +173,26 @@ function createViewport(container) {
   const el = renderer.domElement;
   let drag = null;
   el.style.cursor = "grab";
+  el.addEventListener("contextmenu", (e) => e.preventDefault()); // right-drag = pan
   el.addEventListener("pointerdown", (e) => {
     el.setPointerCapture(e.pointerId);
-    drag = { x: e.clientX, y: e.clientY, moved: 0 };
+    drag = { x: e.clientX, y: e.clientY, moved: 0, pan: e.button === 2 || e.shiftKey };
   });
   el.addEventListener("pointermove", (e) => {
     if (!drag) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     drag.moved += Math.abs(dx) + Math.abs(dy);
-    theta -= dx * 0.005;
-    phi -= dy * 0.005;
+    if (drag.pan) {
+      panBy(dx, dy);
+    } else {
+      theta -= dx * 0.005;
+      phi -= dy * 0.005;
+      updateCamera();
+    }
     drag.x = e.clientX; drag.y = e.clientY;
-    updateCamera();
   });
   el.addEventListener("pointerup", (e) => {
-    if (drag && drag.moved < 5) {
+    if (drag && drag.moved < 5 && !drag.pan) {
       const hit = pick(e.clientX, e.clientY);
       if (hit) { highlight(hit.uid); onSelect(hit.uid); }
     }
