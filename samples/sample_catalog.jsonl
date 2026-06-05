@@ -1,0 +1,8 @@
+{"uid": "HIP91262", "source": "Hipparcos", "object_type": "star", "name": "Vega", "ra_deg": 279.2347, "dec_deg": 38.7837, "parallax_mas": 130.23, "apparent_magnitude": 0.03, "metadata": {"common_name": "Vega"}}
+{"uid": "HIP32349", "source": "Hipparcos", "object_type": "star", "name": "Sirius", "ra_deg": 101.2872, "dec_deg": -16.7161, "parallax_mas": 379.21, "apparent_magnitude": -1.46, "metadata": {"common_name": "Sirius"}}
+{"uid": "HIP27989", "source": "Hipparcos", "object_type": "star", "name": "Betelgeuse", "ra_deg": 88.7929, "dec_deg": 7.4071, "parallax_mas": 6.55, "apparent_magnitude": 0.42, "metadata": {"common_name": "Betelgeuse"}}
+{"uid": "GJ551", "source": "Hipparcos", "object_type": "star", "name": "Proxima Centauri", "ra_deg": 217.4289, "dec_deg": -62.6795, "parallax_mas": 768.07, "apparent_magnitude": 11.13, "metadata": {"common_name": "Proxima Centauri"}}
+{"uid": "M31", "source": "NED", "object_type": "galaxy", "name": "Andromeda Galaxy", "ra_deg": 10.6847, "dec_deg": 41.2687, "redshift": -0.001004, "apparent_magnitude": 3.44, "metadata": {"common_name": "Andromeda"}}
+{"uid": "M87", "source": "NED", "object_type": "galaxy", "name": "Virgo A", "ra_deg": 187.7059, "dec_deg": 12.3911, "redshift": 0.004283, "apparent_magnitude": 8.6, "metadata": {"common_name": "M87"}}
+{"uid": "3C273", "source": "SDSS", "object_type": "quasar", "name": "3C 273", "ra_deg": 187.2779, "dec_deg": 2.0524, "redshift": 0.158339, "apparent_magnitude": 12.9, "metadata": {"common_name": "3C 273"}}
+{"uid": "GAL-HIGHZ", "source": "DESI", "object_type": "galaxy", "name": "High-z galaxy", "ra_deg": 150.0841, "dec_deg": 2.2099, "redshift": 6.5, "apparent_magnitude": 25.1, "metadata": {"note": "illustrative high-redshift example"}}

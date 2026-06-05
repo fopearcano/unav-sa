@@ -85,6 +85,11 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.flake8-bugbear]
+# typer relies on calling Option()/Argument() in parameter defaults — idiomatic,
+# not the B008 mutable-default antipattern.
+extend-immutable-calls = ["typer.Option", "typer.Argument"]
+
 [tool.mypy]
 python_version = "3.10"
 ignore_missing_imports = true
