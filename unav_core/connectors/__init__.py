@@ -1,17 +1,41 @@
-"""Data-source connectors (not implemented yet).
+"""Data-source connectors.
 
-Home for connectors to real astronomical data sources — Gaia, SDSS, DESI,
-NASA/JPL Horizons, SIMBAD, VizieR, MAST and other Virtual Observatory services.
-A connector translates a normalised UNAV query (typically a *regional* query)
-into a source-specific request and maps the response back onto the canonical
-:mod:`unav_core.data` schema, attaching :mod:`unav_core.provenance` records.
+Home for connectors to real astronomical data sources. Each connector translates
+a normalised UNAV query (typically a *regional* query) into a source-specific
+request and maps the response back onto the canonical :mod:`unav_core.data`
+schema, attaching :mod:`unav_core.provenance` records.
 
 Design rules:
 
 * **Regional / bounded queries only** — never bulk-download whole catalogs.
 * Results flow through validation and provenance before reaching callers.
-* astroquery / pyvo are *optional* dependencies, imported lazily.
+* astroquery / pyvo are *optional* dependencies, imported lazily — importing a
+  connector module never requires them.
 
-See ``docs/DATA_SOURCE_STRATEGY.md``. No fetching logic is implemented at this
-stage of the project.
+Implemented: **Gaia DR3** (:mod:`unav_core.connectors.gaia`) and **NASA/JPL
+Horizons** (:mod:`unav_core.connectors.jpl`). SDSS, DESI, SIMBAD, VizieR and
+MAST are future work. See ``docs/DATA_SOURCE_STRATEGY.md``.
 """
+
+from unav_core.connectors.base import (
+    AstroqueryNotInstalledError,
+    ConnectorError,
+    ConnectorNetworkError,
+    EmptyResultError,
+    MalformedResponseError,
+    astroquery_available,
+)
+from unav_core.connectors.gaia import fetch_gaia_region
+from unav_core.connectors.jpl import fetch_jpl_body, fetch_jpl_solar_system
+
+__all__ = [
+    "fetch_gaia_region",
+    "fetch_jpl_body",
+    "fetch_jpl_solar_system",
+    "astroquery_available",
+    "ConnectorError",
+    "AstroqueryNotInstalledError",
+    "ConnectorNetworkError",
+    "EmptyResultError",
+    "MalformedResponseError",
+]
